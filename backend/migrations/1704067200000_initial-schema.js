@@ -350,10 +350,533 @@ exports.up = pgm => {
   pgm.createIndex('enrollments', 'student_id');
   pgm.createIndex('enrollments', 'course_id');
   pgm.createIndex('enrollments', ['student_id', 'course_id'], { unique: true });
+
+  // Lesson progress table
+  pgm.createTable('lesson_progress', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    lesson_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'lessons(id)',
+      onDelete: 'CASCADE',
+    },
+    is_completed: {
+      type: 'boolean',
+      default: false,
+    },
+    completed_at: 'timestamp',
+    last_accessed_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    video_position_seconds: {
+      type: 'integer',
+      default: 0,
+    },
+  });
+
+  // Create indexes for lesson_progress
+  pgm.createIndex('lesson_progress', 'student_id');
+  pgm.createIndex('lesson_progress', 'lesson_id');
+  pgm.createIndex('lesson_progress', ['student_id', 'lesson_id'], { unique: true });
+
+  // Quiz attempts table
+  pgm.createTable('quiz_attempts', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    lesson_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'lessons(id)',
+      onDelete: 'CASCADE',
+    },
+    answers: {
+      type: 'jsonb',
+      notNull: true,
+    },
+    score: {
+      type: 'decimal(5, 2)',
+      notNull: true,
+    },
+    attempted_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for quiz_attempts
+  pgm.createIndex('quiz_attempts', 'student_id');
+  pgm.createIndex('quiz_attempts', 'lesson_id');
+
+  // Assignment submissions table
+  pgm.createTable('assignment_submissions', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    lesson_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'lessons(id)',
+      onDelete: 'CASCADE',
+    },
+    submission_url: {
+      type: 'text',
+      notNull: true,
+    },
+    submitted_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    grade: 'decimal(5, 2)',
+    feedback: 'text',
+    graded_at: 'timestamp',
+    graded_by: {
+      type: 'uuid',
+      references: 'users(id)',
+    },
+  });
+
+  // Create indexes for assignment_submissions
+  pgm.createIndex('assignment_submissions', 'student_id');
+  pgm.createIndex('assignment_submissions', 'lesson_id');
+
+  // Certificates table
+  pgm.createTable('certificates', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    course_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'courses(id)',
+      onDelete: 'CASCADE',
+    },
+    certificate_number: {
+      type: 'varchar(50)',
+      notNull: true,
+      unique: true,
+    },
+    issued_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    pdf_url: {
+      type: 'text',
+      notNull: true,
+    },
+  });
+
+  // Create indexes for certificates
+  pgm.createIndex('certificates', 'student_id');
+  pgm.createIndex('certificates', 'course_id');
+  pgm.createIndex('certificates', 'certificate_number');
+  pgm.createIndex('certificates', ['student_id', 'course_id'], { unique: true });
+
+  // Transactions table
+  pgm.createTable('transactions', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+    },
+    course_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'courses(id)',
+    },
+    creator_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+    },
+    amount: {
+      type: 'decimal(10, 2)',
+      notNull: true,
+    },
+    platform_fee: {
+      type: 'decimal(10, 2)',
+      notNull: true,
+    },
+    creator_earnings: {
+      type: 'decimal(10, 2)',
+      notNull: true,
+    },
+    stripe_payment_id: 'varchar(255)',
+    status: {
+      type: 'varchar(20)',
+      notNull: true,
+      check: "status IN ('pending', 'completed', 'failed', 'refunded')",
+    },
+    created_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for transactions
+  pgm.createIndex('transactions', 'student_id');
+  pgm.createIndex('transactions', 'creator_id');
+  pgm.createIndex('transactions', 'course_id');
+  pgm.createIndex('transactions', 'status');
+
+  // Withdrawals table
+  pgm.createTable('withdrawals', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    creator_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+    },
+    amount: {
+      type: 'decimal(10, 2)',
+      notNull: true,
+    },
+    status: {
+      type: 'varchar(20)',
+      notNull: true,
+      check: "status IN ('pending', 'processing', 'completed', 'failed')",
+    },
+    stripe_transfer_id: 'varchar(255)',
+    requested_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    processed_at: 'timestamp',
+  });
+
+  // Create indexes for withdrawals
+  pgm.createIndex('withdrawals', 'creator_id');
+  pgm.createIndex('withdrawals', 'status');
+
+  // Reviews table
+  pgm.createTable('reviews', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    course_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'courses(id)',
+      onDelete: 'CASCADE',
+    },
+    rating: {
+      type: 'integer',
+      notNull: true,
+      check: 'rating >= 1 AND rating <= 5',
+    },
+    review_text: 'text',
+    created_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    updated_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for reviews
+  pgm.createIndex('reviews', 'student_id');
+  pgm.createIndex('reviews', 'course_id');
+  pgm.createIndex('reviews', 'rating');
+  pgm.createIndex('reviews', ['student_id', 'course_id'], { unique: true });
+
+  // Comments table
+  pgm.createTable('comments', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    lesson_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'lessons(id)',
+      onDelete: 'CASCADE',
+    },
+    user_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    parent_comment_id: {
+      type: 'uuid',
+      references: 'comments(id)',
+      onDelete: 'CASCADE',
+    },
+    content: {
+      type: 'text',
+      notNull: true,
+    },
+    created_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    updated_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for comments
+  pgm.createIndex('comments', 'lesson_id');
+  pgm.createIndex('comments', 'user_id');
+  pgm.createIndex('comments', 'parent_comment_id');
+
+  // Notes table
+  pgm.createTable('notes', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    lesson_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'lessons(id)',
+      onDelete: 'CASCADE',
+    },
+    content: {
+      type: 'text',
+      notNull: true,
+    },
+    video_timestamp_seconds: 'integer',
+    created_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    updated_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for notes
+  pgm.createIndex('notes', 'student_id');
+  pgm.createIndex('notes', 'lesson_id');
+
+  // Notifications table
+  pgm.createTable('notifications', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    user_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    type: {
+      type: 'varchar(50)',
+      notNull: true,
+    },
+    title: {
+      type: 'varchar(255)',
+      notNull: true,
+    },
+    message: {
+      type: 'text',
+      notNull: true,
+    },
+    related_entity_type: 'varchar(50)',
+    related_entity_id: 'uuid',
+    is_read: {
+      type: 'boolean',
+      default: false,
+    },
+    created_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for notifications
+  pgm.createIndex('notifications', 'user_id');
+  pgm.createIndex('notifications', ['user_id', 'is_read']);
+
+  // Wishlists table
+  pgm.createTable('wishlists', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    student_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    course_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'courses(id)',
+      onDelete: 'CASCADE',
+    },
+    added_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for wishlists
+  pgm.createIndex('wishlists', 'student_id');
+  pgm.createIndex('wishlists', 'course_id');
+  pgm.createIndex('wishlists', ['student_id', 'course_id'], { unique: true });
+
+  // Coupons table
+  pgm.createTable('coupons', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    course_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'courses(id)',
+      onDelete: 'CASCADE',
+    },
+    code: {
+      type: 'varchar(50)',
+      notNull: true,
+      unique: true,
+    },
+    discount_percentage: {
+      type: 'integer',
+      notNull: true,
+      check: 'discount_percentage > 0 AND discount_percentage <= 100',
+    },
+    max_uses: 'integer',
+    current_uses: {
+      type: 'integer',
+      default: 0,
+    },
+    expires_at: 'timestamp',
+    is_active: {
+      type: 'boolean',
+      default: true,
+    },
+    created_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+  });
+
+  // Create indexes for coupons
+  pgm.createIndex('coupons', 'code');
+  pgm.createIndex('coupons', 'course_id');
+  pgm.createIndex('coupons', ['is_active', 'expires_at']);
+
+  // Refresh tokens table
+  pgm.createTable('refresh_tokens', {
+    id: {
+      type: 'uuid',
+      primaryKey: true,
+      default: pgm.func('uuid_generate_v4()'),
+    },
+    user_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'users(id)',
+      onDelete: 'CASCADE',
+    },
+    token_hash: {
+      type: 'varchar(255)',
+      notNull: true,
+    },
+    expires_at: {
+      type: 'timestamp',
+      notNull: true,
+    },
+    created_at: {
+      type: 'timestamp',
+      default: pgm.func('current_timestamp'),
+    },
+    revoked_at: 'timestamp',
+  });
+
+  // Create indexes for refresh_tokens
+  pgm.createIndex('refresh_tokens', 'user_id');
+  pgm.createIndex('refresh_tokens', 'token_hash');
 };
 
 exports.down = pgm => {
   // Drop tables in reverse order due to foreign key constraints
+  pgm.dropTable('refresh_tokens');
+  pgm.dropTable('coupons');
+  pgm.dropTable('wishlists');
+  pgm.dropTable('notifications');
+  pgm.dropTable('notes');
+  pgm.dropTable('comments');
+  pgm.dropTable('reviews');
+  pgm.dropTable('withdrawals');
+  pgm.dropTable('transactions');
+  pgm.dropTable('certificates');
+  pgm.dropTable('assignment_submissions');
+  pgm.dropTable('quiz_attempts');
+  pgm.dropTable('lesson_progress');
   pgm.dropTable('enrollments');
   pgm.dropTable('resources');
   pgm.dropTable('videos');
