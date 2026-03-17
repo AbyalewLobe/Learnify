@@ -65,9 +65,12 @@ class RedisClient {
 
   public async connect(): Promise<void> {
     try {
-      if (!this.isConnected) {
-        await this.client.connect();
+      // Check if client is already open/connecting
+      if (this.client.isOpen || this.isConnected) {
+        logger.debug('Redis client already connected or connecting');
+        return;
       }
+      await this.client.connect();
     } catch (error) {
       logger.error('Failed to connect to Redis:', error);
       throw error;

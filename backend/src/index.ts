@@ -96,7 +96,11 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// API routes will be added here
+// API routes
+import authRoutes from './routes/authRoutes';
+
+app.use('/api/v1/auth', authRoutes);
+
 app.use('/api/v1', (req, res) => {
   res.status(200).json({
     message: 'Learnify Backend API v1',
@@ -142,6 +146,9 @@ const startServer = async (): Promise<void> => {
   }
 };
 
-startServer();
+// Start server only if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 export default app;
