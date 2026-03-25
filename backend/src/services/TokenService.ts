@@ -49,7 +49,11 @@ export class TokenService {
    * @param role - User role
    * @returns Access token
    */
-  generateAccessToken(userId: string, email: string, role: 'student' | 'creator' | 'admin'): string {
+  generateAccessToken(
+    userId: string,
+    email: string,
+    role: 'student' | 'creator' | 'admin'
+  ): string {
     try {
       const payload: Omit<TokenPayload, 'type'> & { type: string } = {
         userId,
@@ -80,7 +84,11 @@ export class TokenService {
    * @param role - User role
    * @returns Refresh token
    */
-  generateRefreshToken(userId: string, email: string, role: 'student' | 'creator' | 'admin'): string {
+  generateRefreshToken(
+    userId: string,
+    email: string,
+    role: 'student' | 'creator' | 'admin'
+  ): string {
     try {
       const payload: Omit<TokenPayload, 'type'> & { type: string } = {
         userId,

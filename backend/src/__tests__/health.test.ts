@@ -18,6 +18,7 @@ describe('Health Check', () => {
     expect(response.body).toEqual({
       message: 'Learnify Backend API v1',
       version: '1.0.0',
+      documentation: '/api-docs',
     });
   });
 

@@ -121,19 +121,20 @@ export const rateLimit = (options: RateLimitOptions = {}) => {
 
           if (shouldSkip) {
             // Decrement counter by getting current value and setting it minus 1
-            redisClient
-              .get(key)
-              .then(currentCount => {
+            // Fire-and-forget pattern - don't wait for this to complete
+            (async () => {
+              try {
+                const currentCount = await redisClient.get(key);
                 if (currentCount) {
                   const newCount = Math.max(0, parseInt(currentCount, 10) - 1);
-                  return redisClient.set(key, newCount.toString(), {
+                  await redisClient.set(key, newCount.toString(), {
                     EX: windowSeconds,
                   });
                 }
-              })
-              .catch((error: Error) => {
+              } catch (error) {
                 logger.error('Redis error decrementing rate limit counter:', error);
-              });
+              }
+            })();
           }
 
           return originalSend.call(this, body);

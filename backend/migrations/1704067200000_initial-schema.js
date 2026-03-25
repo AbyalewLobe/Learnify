@@ -3,15 +3,16 @@
 exports.shorthands = undefined;
 
 exports.up = pgm => {
-  // Enable UUID extension
-  pgm.createExtension('uuid-ossp', { ifNotExists: true });
+  // Note: Supabase PostgreSQL 13+ has gen_random_uuid() built-in, no extension needed
+  // But we'll still try to create uuid-ossp for compatibility
+  pgm.sql('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
 
   // Users table
   pgm.createTable('users', {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     email: {
       type: 'varchar(255)',
@@ -60,7 +61,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     creator_id: {
       type: 'uuid',
@@ -132,7 +133,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     course_id: {
       type: 'uuid',
@@ -160,7 +161,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     course_id: {
       type: 'uuid',
@@ -196,7 +197,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     chapter_id: {
       type: 'uuid',
@@ -244,7 +245,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     uploader_id: {
       type: 'uuid',
@@ -287,7 +288,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     lesson_id: {
       type: 'uuid',
@@ -325,7 +326,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -356,7 +357,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -395,7 +396,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -432,7 +433,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -472,7 +473,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -512,7 +513,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -564,7 +565,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     creator_id: {
       type: 'uuid',
@@ -597,7 +598,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -638,7 +639,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     lesson_id: {
       type: 'uuid',
@@ -681,7 +682,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -719,7 +720,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     user_id: {
       type: 'uuid',
@@ -760,7 +761,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     student_id: {
       type: 'uuid',
@@ -790,7 +791,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     course_id: {
       type: 'uuid',
@@ -834,7 +835,7 @@ exports.up = pgm => {
     id: {
       type: 'uuid',
       primaryKey: true,
-      default: pgm.func('uuid_generate_v4()'),
+      default: pgm.func('gen_random_uuid()'),
     },
     user_id: {
       type: 'uuid',

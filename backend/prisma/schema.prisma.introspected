@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model assignment_submissions {
+  id                                             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id                                     String    @db.Uuid
+  lesson_id                                      String    @db.Uuid
+  submission_url                                 String
+  submitted_at                                   DateTime? @default(now()) @db.Timestamp(6)
+  grade                                          Decimal?  @db.Decimal(5, 2)
+  feedback                                       String?
+  graded_at                                      DateTime? @db.Timestamp(6)
+  graded_by                                      String?   @db.Uuid
+  users_assignment_submissions_graded_byTousers  users?    @relation("assignment_submissions_graded_byTousers", fields: [graded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lessons                                        lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_assignment_submissions_student_idTousers users     @relation("assignment_submissions_student_idTousers", fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lesson_id], map: "assignment_submissions_lesson_id_index")
+  @@index([student_id], map: "assignment_submissions_student_id_index")
+}
+
+model certificates {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id         String    @db.Uuid
+  course_id          String    @db.Uuid
+  certificate_number String    @unique @db.VarChar(50)
+  issued_at          DateTime? @default(now()) @db.Timestamp(6)
+  pdf_url            String
+  courses            courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users              users     @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([student_id, course_id], map: "certificates_student_id_course_id_unique_index")
+  @@index([certificate_number], map: "certificates_certificate_number_index")
+  @@index([course_id], map: "certificates_course_id_index")
+  @@index([student_id], map: "certificates_student_id_index")
+}
+
+model chapters {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_id   String    @db.Uuid
+  title       String    @db.VarChar(255)
+  description String?
+  order_index Int
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  courses     courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lessons     lessons[]
+
+  @@index([course_id], map: "chapters_course_id_index")
+  @@index([course_id, order_index], map: "chapters_course_id_order_index_index")
+}
+
+model comments {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lesson_id         String     @db.Uuid
+  user_id           String     @db.Uuid
+  parent_comment_id String?    @db.Uuid
+  content           String
+  created_at        DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?  @default(now()) @db.Timestamp(6)
+  lessons           lessons    @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  comments          comments?  @relation("commentsTocomments", fields: [parent_comment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_comments    comments[] @relation("commentsTocomments")
+  users             users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lesson_id], map: "comments_lesson_id_index")
+  @@index([parent_comment_id], map: "comments_parent_comment_id_index")
+  @@index([user_id], map: "comments_user_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model coupons {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_id           String    @db.Uuid
+  code                String    @unique @db.VarChar(50)
+  discount_percentage Int
+  max_uses            Int?
+  current_uses        Int?      @default(0)
+  expires_at          DateTime? @db.Timestamp(6)
+  is_active           Boolean?  @default(true)
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  courses             courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([code], map: "coupons_code_index")
+  @@index([course_id], map: "coupons_course_id_index")
+  @@index([is_active, expires_at], map: "coupons_is_active_expires_at_index")
+}
+
+model course_tags {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_id  String    @db.Uuid
+  tag        String    @db.VarChar(50)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  courses    courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([course_id, tag], map: "course_tags_course_id_tag_unique_index")
+  @@index([course_id], map: "course_tags_course_id_index")
+  @@index([tag], map: "course_tags_tag_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model courses {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creator_id        String         @db.Uuid
+  title             String         @db.VarChar(255)
+  description       String
+  thumbnail_url     String?
+  trailer_video_id  String?        @db.Uuid
+  category          String         @db.VarChar(100)
+  difficulty_level  String?        @db.VarChar(20)
+  price             Decimal        @db.Decimal(10, 2)
+  discount_price    Decimal?       @db.Decimal(10, 2)
+  status            String         @default("draft") @db.VarChar(20)
+  rejection_reason  String?
+  average_rating    Decimal?       @default(0) @db.Decimal(3, 2)
+  total_ratings     Int?           @default(0)
+  total_enrollments Int?           @default(0)
+  created_at        DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?      @default(now()) @db.Timestamp(6)
+  published_at      DateTime?      @db.Timestamp(6)
+  certificates      certificates[]
+  chapters          chapters[]
+  coupons           coupons[]
+  course_tags       course_tags[]
+  users             users          @relation(fields: [creator_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  enrollments       enrollments[]
+  reviews           reviews[]
+  transactions      transactions[]
+  wishlists         wishlists[]
+
+  @@index([category], map: "courses_category_index")
+  @@index([creator_id], map: "courses_creator_id_index")
+  @@index([status], map: "courses_status_index")
+}
+
+model enrollments {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id       String    @db.Uuid
+  course_id        String    @db.Uuid
+  enrolled_at      DateTime? @default(now()) @db.Timestamp(6)
+  last_accessed_at DateTime? @db.Timestamp(6)
+  courses          courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users            users     @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([student_id, course_id], map: "enrollments_student_id_course_id_unique_index")
+  @@index([course_id], map: "enrollments_course_id_index")
+  @@index([student_id], map: "enrollments_student_id_index")
+}
+
+model lesson_progress {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id             String    @db.Uuid
+  lesson_id              String    @db.Uuid
+  is_completed           Boolean?  @default(false)
+  completed_at           DateTime? @db.Timestamp(6)
+  last_accessed_at       DateTime? @default(now()) @db.Timestamp(6)
+  video_position_seconds Int?      @default(0)
+  lessons                lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                  users     @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([student_id, lesson_id], map: "lesson_progress_student_id_lesson_id_unique_index")
+  @@index([lesson_id], map: "lesson_progress_lesson_id_index")
+  @@index([student_id], map: "lesson_progress_student_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model lessons {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chapter_id             String                   @db.Uuid
+  title                  String                   @db.VarChar(255)
+  description            String?
+  lesson_type            String                   @db.VarChar(20)
+  content                Json?
+  duration_minutes       Int?
+  order_index            Int
+  is_preview             Boolean?                 @default(false)
+  created_at             DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamp(6)
+  assignment_submissions assignment_submissions[]
+  comments               comments[]
+  lesson_progress        lesson_progress[]
+  chapters               chapters                 @relation(fields: [chapter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  notes                  notes[]
+  quiz_attempts          quiz_attempts[]
+  resources              resources[]
+
+  @@index([chapter_id], map: "lessons_chapter_id_index")
+  @@index([chapter_id, order_index], map: "lessons_chapter_id_order_index_index")
+  @@index([lesson_type], map: "lessons_lesson_type_index")
+}
+
+model notes {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id              String    @db.Uuid
+  lesson_id               String    @db.Uuid
+  content                 String
+  video_timestamp_seconds Int?
+  created_at              DateTime? @default(now()) @db.Timestamp(6)
+  updated_at              DateTime? @default(now()) @db.Timestamp(6)
+  lessons                 lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                   users     @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lesson_id], map: "notes_lesson_id_index")
+  @@index([student_id], map: "notes_student_id_index")
+}
+
+model notifications {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String    @db.Uuid
+  type                String    @db.VarChar(50)
+  title               String    @db.VarChar(255)
+  message             String
+  related_entity_type String?   @db.VarChar(50)
+  related_entity_id   String?   @db.Uuid
+  is_read             Boolean?  @default(false)
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "notifications_user_id_index")
+  @@index([user_id, is_read], map: "notifications_user_id_is_read_index")
+}
+
+model pgmigrations {
+  id     Int      @id @default(autoincrement())
+  name   String   @db.VarChar(255)
+  run_on DateTime @db.Timestamp(6)
+}
+
+model quiz_attempts {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id   String    @db.Uuid
+  lesson_id    String    @db.Uuid
+  answers      Json
+  score        Decimal   @db.Decimal(5, 2)
+  attempted_at DateTime? @default(now()) @db.Timestamp(6)
+  lessons      lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users     @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lesson_id], map: "quiz_attempts_lesson_id_index")
+  @@index([student_id], map: "quiz_attempts_student_id_index")
+}
+
+model refresh_tokens {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  token_hash String    @db.VarChar(255)
+  expires_at DateTime  @db.Timestamp(6)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  revoked_at DateTime? @db.Timestamp(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([token_hash], map: "refresh_tokens_token_hash_index")
+  @@index([user_id], map: "refresh_tokens_user_id_index")
+}
+
+model resources {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lesson_id       String    @db.Uuid
+  title           String    @db.VarChar(255)
+  file_type       String    @db.VarChar(50)
+  file_size_bytes BigInt
+  file_url        String
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  lessons         lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lesson_id], map: "resources_lesson_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reviews {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id  String    @db.Uuid
+  course_id   String    @db.Uuid
+  rating      Int
+  review_text String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  courses     courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users       users     @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([student_id, course_id], map: "reviews_student_id_course_id_unique_index")
+  @@index([course_id], map: "reviews_course_id_index")
+  @@index([rating], map: "reviews_rating_index")
+  @@index([student_id], map: "reviews_student_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model transactions {
+  id                                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id                           String    @db.Uuid
+  course_id                            String    @db.Uuid
+  creator_id                           String    @db.Uuid
+  amount                               Decimal   @db.Decimal(10, 2)
+  platform_fee                         Decimal   @db.Decimal(10, 2)
+  creator_earnings                     Decimal   @db.Decimal(10, 2)
+  stripe_payment_id                    String?   @db.VarChar(255)
+  status                               String    @db.VarChar(20)
+  created_at                           DateTime? @default(now()) @db.Timestamp(6)
+  courses                              courses   @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_transactions_creator_idTousers users     @relation("transactions_creator_idTousers", fields: [creator_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_transactions_student_idTousers users     @relation("transactions_student_idTousers", fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([course_id], map: "transactions_course_id_index")
+  @@index([creator_id], map: "transactions_creator_id_index")
+  @@index([status], map: "transactions_status_index")
+  @@index([student_id], map: "transactions_student_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id                                                              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                                           String                   @unique @db.VarChar(255)
+  password_hash                                                   String                   @db.VarChar(255)
+  first_name                                                      String                   @db.VarChar(100)
+  last_name                                                       String                   @db.VarChar(100)
+  role                                                            String                   @db.VarChar(20)
+  is_active                                                       Boolean?                 @default(true)
+  profile_image_url                                               String?
+  bio                                                             String?
+  created_at                                                      DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at                                                      DateTime?                @default(now()) @db.Timestamp(6)
+  assignment_submissions_assignment_submissions_graded_byTousers  assignment_submissions[] @relation("assignment_submissions_graded_byTousers")
+  assignment_submissions_assignment_submissions_student_idTousers assignment_submissions[] @relation("assignment_submissions_student_idTousers")
+  certificates                                                    certificates[]
+  comments                                                        comments[]
+  courses                                                         courses[]
+  enrollments                                                     enrollments[]
+  lesson_progress                                                 lesson_progress[]
+  notes                                                           notes[]
+  notifications                                                   notifications[]
+  quiz_attempts                                                   quiz_attempts[]
+  refresh_tokens                                                  refresh_tokens[]
+  reviews                                                         reviews[]
+  transactions_transactions_creator_idTousers                     transactions[]           @relation("transactions_creator_idTousers")
+  transactions_transactions_student_idTousers                     transactions[]           @relation("transactions_student_idTousers")
+  videos                                                          videos[]
+  wishlists                                                       wishlists[]
+  withdrawals                                                     withdrawals[]
+
+  @@index([email], map: "users_email_index")
+  @@index([role], map: "users_role_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model videos {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uploader_id       String    @db.Uuid
+  original_filename String    @db.VarChar(255)
+  s3_key            String
+  duration_seconds  Int?
+  status            String    @default("pending") @db.VarChar(20)
+  error_message     String?
+  resolutions       Json?
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+  users             users     @relation(fields: [uploader_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status], map: "videos_status_index")
+  @@index([uploader_id], map: "videos_uploader_id_index")
+}
+
+model wishlists {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id String    @db.Uuid
+  course_id  String    @db.Uuid
+  added_at   DateTime? @default(now()) @db.Timestamp(6)
+  courses    courses   @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([student_id, course_id], map: "wishlists_student_id_course_id_unique_index")
+  @@index([course_id], map: "wishlists_course_id_index")
+  @@index([student_id], map: "wishlists_student_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model withdrawals {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creator_id         String    @db.Uuid
+  amount             Decimal   @db.Decimal(10, 2)
+  status             String    @db.VarChar(20)
+  stripe_transfer_id String?   @db.VarChar(255)
+  requested_at       DateTime? @default(now()) @db.Timestamp(6)
+  processed_at       DateTime? @db.Timestamp(6)
+  users              users     @relation(fields: [creator_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([creator_id], map: "withdrawals_creator_id_index")
+  @@index([status], map: "withdrawals_status_index")
+}

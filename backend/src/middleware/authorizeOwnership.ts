@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from './authenticate';
-import { pool } from '../config/database';
-import logger from '../utils/logger';
+import { prisma } from '../config/prisma';
+import { logger } from '../utils/logger';
 
 type ResourceType = 'course' | 'chapter' | 'lesson';
 
@@ -9,20 +9,16 @@ type ResourceType = 'course' | 'chapter' | 'lesson';
  * Course ownership validation middleware
  * Checks if user is the course creator or an admin
  * Must be used after authenticate middleware
- * 
+ *
  * @param resourceType - Type of resource to check ownership for
  * @returns Express middleware function
- * 
+ *
  * @example
  * router.put('/courses/:id', authenticate, authorizeOwnership('course'), updateCourseHandler);
  * router.delete('/chapters/:id', authenticate, authorizeOwnership('chapter'), deleteChapterHandler);
  */
 export const authorizeOwnership = (resourceType: ResourceType) => {
-  return async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Check if user is authenticated
       if (!req.user) {
@@ -36,16 +32,14 @@ export const authorizeOwnership = (resourceType: ResourceType) => {
 
       // Admins have access to all resources
       if (req.user.role === 'admin') {
-        logger.debug(
-          `Admin ${req.user.userId} granted access to ${resourceType} ${req.params.id}`
-        );
+        logger.debug(`Admin ${req.user.userId} granted access to ${resourceType} ${req.params.id}`);
         next();
         return;
       }
 
       // Get resource ID from route parameters
       const resourceId = req.params.id || req.params.courseId || req.params.chapterId;
-      
+
       if (!resourceId) {
         logger.error('Resource ID not found in request parameters');
         res.status(400).json({
@@ -57,7 +51,7 @@ export const authorizeOwnership = (resourceType: ResourceType) => {
 
       // Check ownership based on resource type
       let isOwner = false;
-      
+
       try {
         switch (resourceType) {
           case 'course':
@@ -115,63 +109,63 @@ export const authorizeOwnership = (resourceType: ResourceType) => {
 /**
  * Check if user owns a course
  */
-async function checkCourseOwnership(
-  userId: string,
-  courseId: string
-): Promise<boolean> {
-  const result = await pool.query(
-    'SELECT creator_id FROM courses WHERE id = $1',
-    [courseId]
-  );
+async function checkCourseOwnership(userId: string, courseId: string): Promise<boolean> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { creator_id: true },
+  });
 
-  if (result.rows.length === 0) {
+  if (!course) {
     return false;
   }
 
-  return result.rows[0].creator_id === userId;
+  return course.creator_id === userId;
 }
 
 /**
  * Check if user owns the course that contains a chapter
  */
-async function checkChapterOwnership(
-  userId: string,
-  chapterId: string
-): Promise<boolean> {
-  const result = await pool.query(
-    `SELECT c.creator_id 
-     FROM chapters ch
-     JOIN courses c ON ch.course_id = c.id
-     WHERE ch.id = $1`,
-    [chapterId]
-  );
+async function checkChapterOwnership(userId: string, chapterId: string): Promise<boolean> {
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: chapterId },
+    select: {
+      course: {
+        select: {
+          creator_id: true,
+        },
+      },
+    },
+  });
 
-  if (result.rows.length === 0) {
+  if (!chapter) {
     return false;
   }
 
-  return result.rows[0].creator_id === userId;
+  return chapter.course.creator_id === userId;
 }
 
 /**
  * Check if user owns the course that contains a lesson
  */
-async function checkLessonOwnership(
-  userId: string,
-  lessonId: string
-): Promise<boolean> {
-  const result = await pool.query(
-    `SELECT c.creator_id 
-     FROM lessons l
-     JOIN chapters ch ON l.chapter_id = ch.id
-     JOIN courses c ON ch.course_id = c.id
-     WHERE l.id = $1`,
-    [lessonId]
-  );
+async function checkLessonOwnership(userId: string, lessonId: string): Promise<boolean> {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    select: {
+      chapter: {
+        select: {
+          course: {
+            select: {
+              creator_id: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-  if (result.rows.length === 0) {
+  if (!lesson) {
     return false;
   }
 
-  return result.rows[0].creator_id === userId;
+  return lesson.chapter.course.creator_id === userId;
 }

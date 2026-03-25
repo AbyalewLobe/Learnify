@@ -1,6 +1,6 @@
 import request from 'supertest';
 import app from '../index';
-import { database } from '../config/database';
+import { PrismaClientSingleton } from '../config/prisma';
 import { redisClient } from '../config/redis';
 
 describe('Authentication System', () => {
@@ -19,11 +19,11 @@ describe('Authentication System', () => {
   afterAll(async () => {
     // Clean up
     try {
-      await database.close();
+      await PrismaClientSingleton.disconnect();
     } catch (error) {
       console.warn('Database cleanup warning:', error);
     }
-    
+
     try {
       if (redisClient.isReady()) {
         await redisClient.disconnect();
@@ -43,10 +43,7 @@ describe('Authentication System', () => {
         role: 'student',
       };
 
-      const response = await request(app)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(201);
+      const response = await request(app).post('/api/v1/auth/register').send(userData).expect(201);
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.user).toHaveProperty('id');
@@ -64,16 +61,10 @@ describe('Authentication System', () => {
       };
 
       // Register first time
-      await request(app)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(201);
+      await request(app).post('/api/v1/auth/register').send(userData).expect(201);
 
       // Try to register again with same email
-      const response = await request(app)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(400);
+      const response = await request(app).post('/api/v1/auth/register').send(userData).expect(400);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('already registered');
@@ -88,10 +79,7 @@ describe('Authentication System', () => {
         role: 'student',
       };
 
-      const response = await request(app)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(400);
+      const response = await request(app).post('/api/v1/auth/register').send(userData).expect(400);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('Validation error');
@@ -106,10 +94,7 @@ describe('Authentication System', () => {
         role: 'student',
       };
 
-      const response = await request(app)
-        .post('/api/v1/auth/register')
-        .send(userData)
-        .expect(400);
+      const response = await request(app).post('/api/v1/auth/register').send(userData).expect(400);
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toContain('Validation error');
@@ -127,9 +112,7 @@ describe('Authentication System', () => {
 
     beforeAll(async () => {
       // Register a test user
-      await request(app)
-        .post('/api/v1/auth/register')
-        .send(testUser);
+      await request(app).post('/api/v1/auth/register').send(testUser);
     });
 
     it('should login successfully with valid credentials', async () => {
@@ -188,21 +171,20 @@ describe('Authentication System', () => {
         role: 'student',
       };
 
-      await request(app)
-        .post('/api/v1/auth/register')
-        .send(testUser);
+      await request(app).post('/api/v1/auth/register').send(testUser);
 
-      const loginResponse = await request(app)
-        .post('/api/v1/auth/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        });
+      const loginResponse = await request(app).post('/api/v1/auth/login').send({
+        email: testUser.email,
+        password: testUser.password,
+      });
 
       refreshToken = loginResponse.body.data.tokens.refreshToken;
     });
 
     it('should refresh tokens successfully', async () => {
+      // Wait 1 second to ensure new token has different iat timestamp
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       const response = await request(app)
         .post('/api/v1/auth/refresh')
         .send({ refreshToken })

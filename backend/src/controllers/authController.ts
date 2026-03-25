@@ -105,11 +105,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     await refreshTokenRepository.create(user.id, refreshTokenHash, expiresAt);
 
     // Cache user session in Redis (15 minutes)
-    await redisClient.setJSON(`session:${user.id}`, {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    }, 900);
+    await redisClient.setJSON(
+      `session:${user.id}`,
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      900
+    );
 
     // Remove password hash from response
     const { password_hash: _, ...userWithoutPassword } = user;
@@ -261,7 +265,7 @@ export const requestPasswordReset = async (req: Request, res: Response): Promise
 
     // Find user by email
     const user = await userRepository.findByEmail(email);
-    
+
     // Always return success to prevent email enumeration
     if (!user) {
       res.status(200).json({
@@ -277,15 +281,19 @@ export const requestPasswordReset = async (req: Request, res: Response): Promise
     const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
 
     // Store reset token in Redis
-    await redisClient.setJSON(`password-reset:${resetTokenHash}`, {
-      userId: user.id,
-      email: user.email,
-      expiresAt,
-    }, 3600);
+    await redisClient.setJSON(
+      `password-reset:${resetTokenHash}`,
+      {
+        userId: user.id,
+        email: user.email,
+        expiresAt,
+      },
+      3600
+    );
 
     // Send reset email via AWS SES
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-    
+
     try {
       await SESService.sendEmail(
         user.email,

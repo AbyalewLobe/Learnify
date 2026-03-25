@@ -1,5 +1,9 @@
 {
-  "database-url-var": "DATABASE_URL",
+  "host": "aws-1-eu-west-1.pooler.supabase.com",
+  "port": 5432,
+  "database": "postgres",
+  "user": "postgres.bexnuljqpjnukrvaquhz",
+  "password": "Abyalew@#1727",
   "migrations-dir": "migrations",
   "migrations-table": "pgmigrations",
   "migrations-schema": "public",

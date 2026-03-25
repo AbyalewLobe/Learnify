@@ -1,42 +1,29 @@
-import { Pool, PoolConfig } from 'pg';
-import { config } from './env';
+/**
+ * @deprecated This file is deprecated. Use Prisma Client from '../config/prisma' instead.
+ *
+ * The Database class has been replaced by Prisma Client for type-safe database operations.
+ * This file is kept temporarily for backward compatibility but will be removed in a future version.
+ *
+ * Migration guide:
+ * - Replace `import { database } from './config/database'` with `import { prisma } from './config/prisma'`
+ * - Replace `database.query()` with Prisma Client methods
+ * - Replace `database.healthCheck()` with `prisma.$queryRaw\`SELECT 1\``
+ * - Replace `database.close()` with `PrismaClientSingleton.disconnect()`
+ */
+
+import { prisma, PrismaClientSingleton } from './prisma';
 import { logger } from '../utils/logger';
 
+/**
+ * @deprecated Use Prisma Client from '../config/prisma' instead
+ */
 class Database {
-  private pool: Pool;
   private static instance: Database;
 
   private constructor() {
-    const poolConfig: PoolConfig = {
-      connectionString: config.database.url,
-      host: config.database.host,
-      port: config.database.port,
-      database: config.database.name,
-      user: config.database.user,
-      password: config.database.password,
-      min: config.database.pool.min,
-      max: config.database.pool.max,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-      ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
-    };
-
-    this.pool = new Pool(poolConfig);
-
-    // Handle pool errors
-    this.pool.on('error', err => {
-      logger.error('Unexpected error on idle client', err);
-    });
-
-    // Handle pool connection
-    this.pool.on('connect', _client => {
-      logger.debug('New client connected to database');
-    });
-
-    // Handle pool removal
-    this.pool.on('remove', _client => {
-      logger.debug('Client removed from pool');
-    });
+    logger.warn(
+      'Database class is deprecated. Please use Prisma Client from ../config/prisma instead.'
+    );
   }
 
   public static getInstance(): Database {
@@ -46,33 +33,19 @@ class Database {
     return Database.instance;
   }
 
-  public getPool(): Pool {
-    return this.pool;
+  /**
+   * @deprecated Use prisma.$queryRaw or prisma.$executeRaw instead
+   */
+  public async query(_text: string, _params?: any[]): Promise<any> {
+    throw new Error('Database.query() is no longer supported. Use Prisma Client methods instead.');
   }
 
-  public async query(text: string, params?: any[]): Promise<any> {
-    const start = Date.now();
-    try {
-      const result = await this.pool.query(text, params);
-      const duration = Date.now() - start;
-      logger.debug('Executed query', { text, duration, rows: result.rowCount });
-      return result;
-    } catch (error) {
-      logger.error('Database query error', { text, params, error });
-      throw error;
-    }
-  }
-
-  public async getClient() {
-    return await this.pool.connect();
-  }
-
+  /**
+   * @deprecated Use prisma.$queryRaw\`SELECT 1\` instead
+   */
   public async healthCheck(): Promise<boolean> {
     try {
-      const result = await this.query('SELECT NOW() as current_time');
-      logger.info('Database health check passed', {
-        currentTime: result.rows[0]?.current_time,
-      });
+      await prisma.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
       logger.error('Database health check failed', error);
@@ -80,16 +53,16 @@ class Database {
     }
   }
 
+  /**
+   * @deprecated Use PrismaClientSingleton.disconnect() instead
+   */
   public async close(): Promise<void> {
-    try {
-      await this.pool.end();
-      logger.info('Database pool closed');
-    } catch (error) {
-      logger.error('Error closing database pool', error);
-      throw error;
-    }
+    await PrismaClientSingleton.disconnect();
   }
 }
 
+/**
+ * @deprecated Use prisma from '../config/prisma' instead
+ */
 export const database = Database.getInstance();
 export { Database };

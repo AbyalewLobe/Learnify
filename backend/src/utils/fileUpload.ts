@@ -194,3 +194,39 @@ export class FileUploadService {
     }
   }
 }
+
+// Simple upload function for multer files
+export async function uploadToS3(file: Express.Multer.File, folder: string): Promise<string> {
+  const fileId = uuidv4();
+  const fileExtension = file.originalname.split('.').pop() || 'jpg';
+  const key = `${folder}/${fileId}.${fileExtension}`;
+  const bucket = config.aws.s3.buckets.public;
+
+  try {
+    await S3Service.uploadFile(bucket, key, file.buffer, file.mimetype);
+    const url = `https://${bucket}.s3.${config.aws.region}.amazonaws.com/${key}`;
+    return url;
+  } catch (error) {
+    logger.error('Failed to upload file to S3:', { folder, filename: file.originalname, error });
+    throw error;
+  }
+}
+
+// Simple delete function
+export async function deleteFromS3(url: string): Promise<void> {
+  try {
+    // Extract bucket and key from URL
+    const urlParts = url.match(/https:\/\/([^.]+)\.s3\.[^/]+\/(.+)/);
+    if (!urlParts) {
+      throw new Error('Invalid S3 URL format');
+    }
+
+    const bucket = urlParts[1];
+    const key = urlParts[2];
+
+    await S3Service.deleteFile(bucket, key);
+  } catch (error) {
+    logger.error('Failed to delete file from S3:', { url, error });
+    throw error;
+  }
+}

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { tokenService } from '../services/TokenService';
 import { redisClient } from '../config/redis';
 import { userRepository } from '../repositories/UserRepository';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -26,7 +26,7 @@ export const authenticate = async (
   try {
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
@@ -77,7 +77,7 @@ export const authenticate = async (
     if (!userData) {
       try {
         const user = await userRepository.findById(payload.userId);
-        
+
         if (!user) {
           res.status(401).json({
             success: false,
@@ -102,7 +102,7 @@ export const authenticate = async (
 
         // Cache user data for 15 minutes
         try {
-          await redisClient.setex(cacheKey, 900, JSON.stringify(userData));
+          await redisClient.set(cacheKey, JSON.stringify(userData), { EX: 900 });
         } catch (error) {
           logger.warn('Redis cache write failed:', error);
         }

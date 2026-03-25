@@ -1,5 +1,5 @@
-import { Pool } from 'pg';
-import { database } from '../config/database';
+import { PrismaClient } from '@prisma/client';
+import { prisma } from '../config/prisma';
 import { logger } from '../utils/logger';
 
 export interface RefreshToken {
@@ -8,14 +8,17 @@ export interface RefreshToken {
   token_hash: string;
   expires_at: Date;
   created_at: Date;
-  revoked_at?: Date;
+  revoked_at?: Date | null;
 }
 
-export class RefreshTokenRepository {
-  private pool: Pool;
+// Type for transaction client
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
-  constructor() {
-    this.pool = database.getPool();
+export class RefreshTokenRepository {
+  private prisma: PrismaClient | TransactionClient;
+
+  constructor(prismaClient?: PrismaClient | TransactionClient) {
+    this.prisma = prismaClient || prisma;
   }
 
   /**
@@ -27,15 +30,16 @@ export class RefreshTokenRepository {
    */
   async create(userId: string, tokenHash: string, expiresAt: Date): Promise<RefreshToken> {
     try {
-      const query = `
-        INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-        VALUES ($1, $2, $3)
-        RETURNING *
-      `;
+      const refreshToken = await this.prisma.refreshToken.create({
+        data: {
+          user_id: userId,
+          token_hash: tokenHash,
+          expires_at: expiresAt,
+        },
+      });
 
-      const result = await this.pool.query(query, [userId, tokenHash, expiresAt]);
-      logger.debug('Refresh token created', { userId, tokenId: result.rows[0].id });
-      return result.rows[0];
+      logger.debug('Refresh token created', { userId, tokenId: refreshToken.id });
+      return refreshToken as RefreshToken;
     } catch (error) {
       logger.error('Error creating refresh token:', error);
       throw error;
@@ -49,18 +53,14 @@ export class RefreshTokenRepository {
    */
   async findByHash(tokenHash: string): Promise<RefreshToken | null> {
     try {
-      const query = `
-        SELECT * FROM refresh_tokens
-        WHERE token_hash = $1 AND revoked_at IS NULL
-      `;
+      const refreshToken = await this.prisma.refreshToken.findFirst({
+        where: {
+          token_hash: tokenHash,
+          revoked_at: null,
+        },
+      });
 
-      const result = await this.pool.query(query, [tokenHash]);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      return result.rows[0];
+      return refreshToken as RefreshToken | null;
     } catch (error) {
       logger.error('Error finding refresh token:', error);
       throw error;
@@ -73,13 +73,15 @@ export class RefreshTokenRepository {
    */
   async revoke(tokenHash: string): Promise<void> {
     try {
-      const query = `
-        UPDATE refresh_tokens
-        SET revoked_at = CURRENT_TIMESTAMP
-        WHERE token_hash = $1
-      `;
+      await this.prisma.refreshToken.updateMany({
+        where: {
+          token_hash: tokenHash,
+        },
+        data: {
+          revoked_at: new Date(),
+        },
+      });
 
-      await this.pool.query(query, [tokenHash]);
       logger.debug('Refresh token revoked', { tokenHash });
     } catch (error) {
       logger.error('Error revoking refresh token:', error);
@@ -93,13 +95,16 @@ export class RefreshTokenRepository {
    */
   async revokeAllForUser(userId: string): Promise<void> {
     try {
-      const query = `
-        UPDATE refresh_tokens
-        SET revoked_at = CURRENT_TIMESTAMP
-        WHERE user_id = $1 AND revoked_at IS NULL
-      `;
+      await this.prisma.refreshToken.updateMany({
+        where: {
+          user_id: userId,
+          revoked_at: null,
+        },
+        data: {
+          revoked_at: new Date(),
+        },
+      });
 
-      await this.pool.query(query, [userId]);
       logger.info('All refresh tokens revoked for user', { userId });
     } catch (error) {
       logger.error('Error revoking all refresh tokens for user:', error);
@@ -112,13 +117,15 @@ export class RefreshTokenRepository {
    */
   async deleteExpired(): Promise<number> {
     try {
-      const query = `
-        DELETE FROM refresh_tokens
-        WHERE expires_at < CURRENT_TIMESTAMP
-      `;
+      const result = await this.prisma.refreshToken.deleteMany({
+        where: {
+          expires_at: {
+            lt: new Date(),
+          },
+        },
+      });
 
-      const result = await this.pool.query(query);
-      const deletedCount = result.rowCount || 0;
+      const deletedCount = result.count;
       logger.info('Expired refresh tokens deleted', { count: deletedCount });
       return deletedCount;
     } catch (error) {
@@ -134,17 +141,17 @@ export class RefreshTokenRepository {
    */
   async isValid(tokenHash: string): Promise<boolean> {
     try {
-      const query = `
-        SELECT EXISTS(
-          SELECT 1 FROM refresh_tokens
-          WHERE token_hash = $1
-            AND revoked_at IS NULL
-            AND expires_at > CURRENT_TIMESTAMP
-        )
-      `;
+      const count = await this.prisma.refreshToken.count({
+        where: {
+          token_hash: tokenHash,
+          revoked_at: null,
+          expires_at: {
+            gt: new Date(),
+          },
+        },
+      });
 
-      const result = await this.pool.query(query, [tokenHash]);
-      return result.rows[0].exists;
+      return count > 0;
     } catch (error) {
       logger.error('Error checking token validity:', error);
       throw error;

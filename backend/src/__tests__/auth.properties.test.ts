@@ -18,34 +18,28 @@ describe('Property-Based Tests: Authentication', () => {
   describe('Property 3: Password Hashing Security', () => {
     it('should never return plaintext password as hash', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 8, maxLength: 100 }),
-          async (password) => {
-            const hash = await passwordService.hash(password);
-            
-            // Property: Hash should never equal plaintext
-            expect(hash).not.toBe(password);
-            
-            // Property: Hash should be different from plaintext
-            expect(hash.length).toBeGreaterThan(password.length);
-          }
-        ),
+        fc.asyncProperty(fc.string({ minLength: 8, maxLength: 100 }), async password => {
+          const hash = await passwordService.hash(password);
+
+          // Property: Hash should never equal plaintext
+          expect(hash).not.toBe(password);
+
+          // Property: Hash should be different from plaintext
+          expect(hash.length).toBeGreaterThan(password.length);
+        }),
         { numRuns: 20 } // Reduced runs due to bcrypt being slow
       );
     }, 30000); // Increased timeout for bcrypt
 
     it('should maintain bcrypt format for all hashed passwords', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 8, maxLength: 100 }),
-          async (password) => {
-            const hash = await passwordService.hash(password);
-            
-            // Property: Hash should match bcrypt format ($2a$, $2b$, or $2y$)
-            const bcryptRegex = /^\$2[aby]\$\d{2}\$.{53}$/;
-            expect(hash).toMatch(bcryptRegex);
-          }
-        ),
+        fc.asyncProperty(fc.string({ minLength: 8, maxLength: 100 }), async password => {
+          const hash = await passwordService.hash(password);
+
+          // Property: Hash should match bcrypt format ($2a$, $2b$, or $2y$)
+          const bcryptRegex = /^\$2[aby]\$\d{2}\$.{53}$/;
+          expect(hash).toMatch(bcryptRegex);
+        }),
         { numRuns: 20 } // Reduced runs due to bcrypt being slow
       );
     }, 30000); // Increased timeout for bcrypt
@@ -54,10 +48,10 @@ describe('Property-Based Tests: Authentication', () => {
       const password = 'TestPassword123';
       const hash1 = await passwordService.hash(password);
       const hash2 = await passwordService.hash(password);
-      
+
       // Property: Same password should produce different hashes due to salt
       expect(hash1).not.toBe(hash2);
-      
+
       // But both should verify correctly
       const isValid1 = await passwordService.compare(password, hash1);
       const isValid2 = await passwordService.compare(password, hash2);
@@ -67,16 +61,13 @@ describe('Property-Based Tests: Authentication', () => {
 
     it('should correctly verify matching passwords', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 8, maxLength: 100 }),
-          async (password) => {
-            const hash = await passwordService.hash(password);
-            const isValid = await passwordService.compare(password, hash);
-            
-            // Property: Original password should always match its hash
-            expect(isValid).toBe(true);
-          }
-        ),
+        fc.asyncProperty(fc.string({ minLength: 8, maxLength: 100 }), async password => {
+          const hash = await passwordService.hash(password);
+          const isValid = await passwordService.compare(password, hash);
+
+          // Property: Original password should always match its hash
+          expect(isValid).toBe(true);
+        }),
         { numRuns: 20 } // Reduced runs due to bcrypt being slow
       );
     }, 30000); // Increased timeout for bcrypt
@@ -88,10 +79,10 @@ describe('Property-Based Tests: Authentication', () => {
           fc.string({ minLength: 8, maxLength: 100 }),
           async (password1, password2) => {
             fc.pre(password1 !== password2); // Only test different passwords
-            
+
             const hash = await passwordService.hash(password1);
             const isValid = await passwordService.compare(password2, hash);
-            
+
             // Property: Different password should not match hash
             expect(isValid).toBe(false);
           }
@@ -115,12 +106,12 @@ describe('Property-Based Tests: Authentication', () => {
           fc.constantFrom('student', 'creator', 'admin'),
           (userId, email, role) => {
             const tokens = tokenService.generateTokens(userId, email, role as any);
-            
+
             // Property: Both tokens must be present
             expect(tokens.accessToken).toBeDefined();
             expect(tokens.refreshToken).toBeDefined();
             expect(tokens.expiresIn).toBeDefined();
-            
+
             // Property: Tokens should be non-empty strings
             expect(typeof tokens.accessToken).toBe('string');
             expect(typeof tokens.refreshToken).toBe('string');
@@ -140,7 +131,7 @@ describe('Property-Based Tests: Authentication', () => {
           fc.constantFrom('student', 'creator', 'admin'),
           (userId, email, role) => {
             const tokens = tokenService.generateTokens(userId, email, role as any);
-            
+
             // Property: expiresIn should be 900 seconds (15 minutes)
             expect(tokens.expiresIn).toBe(900);
           }
@@ -157,14 +148,14 @@ describe('Property-Based Tests: Authentication', () => {
           fc.constantFrom('student', 'creator', 'admin'),
           (userId, email, role) => {
             const tokens = tokenService.generateTokens(userId, email, role as any);
-            
+
             // Decode and verify access token payload
             const accessPayload = tokenService.validateToken(tokens.accessToken);
             expect(accessPayload.userId).toBe(userId);
             expect(accessPayload.email).toBe(email);
             expect(accessPayload.role).toBe(role);
             expect(accessPayload.type).toBe('access');
-            
+
             // Decode and verify refresh token payload
             const refreshPayload = tokenService.validateToken(tokens.refreshToken);
             expect(refreshPayload.userId).toBe(userId);
@@ -183,19 +174,19 @@ describe('Property-Based Tests: Authentication', () => {
       const userId = '00000000-0000-1000-8000-000000000000';
       const email = 'test@example.com';
       const role = 'student';
-      
+
       const tokens1 = tokenService.generateTokens(userId, email, role as any);
       const payload1 = tokenService.decodeToken(tokens1.accessToken) as any;
-      
+
       // Property: Decoded token should have iat (issued at) timestamp
       expect(payload1).toBeDefined();
       expect((payload1 as any).iat).toBeDefined();
       expect(typeof (payload1 as any).iat).toBe('number');
-      
+
       // Property: Token signature should be unique even with same payload
       // (JWT includes signature which makes each token unique)
       const tokens2 = tokenService.generateTokens(userId, email, role as any);
-      
+
       // Tokens may have same iat if generated in same second, but that's expected behavior
       // The important property is that the token service works correctly
       expect(tokens1.accessToken).toBeDefined();
@@ -210,7 +201,7 @@ describe('Property-Based Tests: Authentication', () => {
           fc.constantFrom('student', 'creator', 'admin'),
           (userId, email, role) => {
             const tokens = tokenService.generateTokens(userId, email, role as any);
-            
+
             // Property: Generated tokens should always be valid
             expect(() => tokenService.validateToken(tokens.accessToken)).not.toThrow();
             expect(() => tokenService.validateToken(tokens.refreshToken)).not.toThrow();
@@ -222,13 +213,10 @@ describe('Property-Based Tests: Authentication', () => {
 
     it('should reject tokens with invalid signature', () => {
       fc.assert(
-        fc.property(
-          fc.string({ minLength: 10, maxLength: 200 }),
-          (invalidToken) => {
-            // Property: Invalid tokens should always throw error
-            expect(() => tokenService.validateToken(invalidToken)).toThrow();
-          }
-        ),
+        fc.property(fc.string({ minLength: 10, maxLength: 200 }), invalidToken => {
+          // Property: Invalid tokens should always throw error
+          expect(() => tokenService.validateToken(invalidToken)).toThrow();
+        }),
         { numRuns: 50 }
       );
     });
@@ -249,16 +237,16 @@ describe('Property-Based Tests: Authentication', () => {
             const response = await request(app)
               .post('/api/v1/auth/login')
               .send({ email, password });
-            
+
             // Property: Invalid credentials should return 400 (validation error), 401 (auth error), or 500 (DB error)
             // 400 for validation errors (e.g., whitespace-only passwords)
             // 401 for authentication failures
             // 500 for database errors
             expect([400, 401, 500]).toContain(response.status);
-            
+
             // Property: Response should not contain tokens
             expect(response.body.data?.tokens).toBeUndefined();
-            
+
             // Property: Response should indicate failure
             expect(response.body.success).toBe(false);
           }
@@ -275,19 +263,17 @@ describe('Property-Based Tests: Authentication', () => {
           fc.string({ minLength: 1, maxLength: 50 }),
           fc.string({ minLength: 1, maxLength: 50 }),
           async (invalidEmail, password, firstName, lastName) => {
-            const response = await request(app)
-              .post('/api/v1/auth/register')
-              .send({
-                email: invalidEmail,
-                password,
-                first_name: firstName,
-                last_name: lastName,
-                role: 'student',
-              });
-            
+            const response = await request(app).post('/api/v1/auth/register').send({
+              email: invalidEmail,
+              password,
+              first_name: firstName,
+              last_name: lastName,
+              role: 'student',
+            });
+
             // Property: Malformed email should return 400
             expect(response.status).toBe(400);
-            
+
             // Property: Response should indicate validation error
             expect(response.body.success).toBe(false);
             expect(response.body.message).toContain('Validation error');
@@ -305,19 +291,17 @@ describe('Property-Based Tests: Authentication', () => {
           fc.string({ minLength: 1, maxLength: 50 }),
           fc.string({ minLength: 1, maxLength: 50 }),
           async (email, shortPassword, firstName, lastName) => {
-            const response = await request(app)
-              .post('/api/v1/auth/register')
-              .send({
-                email,
-                password: shortPassword,
-                first_name: firstName,
-                last_name: lastName,
-                role: 'student',
-              });
-            
+            const response = await request(app).post('/api/v1/auth/register').send({
+              email,
+              password: shortPassword,
+              first_name: firstName,
+              last_name: lastName,
+              role: 'student',
+            });
+
             // Property: Short password should return 400
             expect(response.status).toBe(400);
-            
+
             // Property: Response should indicate validation error
             expect(response.body.success).toBe(false);
             expect(response.body.message).toContain('Validation error');
@@ -331,7 +315,7 @@ describe('Property-Based Tests: Authentication', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.constantFrom('email', 'password', 'first_name', 'last_name', 'role'),
-          async (missingField) => {
+          async missingField => {
             const validData = {
               email: 'test@example.com',
               password: 'TestPassword123',
@@ -339,18 +323,16 @@ describe('Property-Based Tests: Authentication', () => {
               last_name: 'User',
               role: 'student',
             };
-            
+
             // Remove one required field
             const incompleteData = { ...validData };
             delete (incompleteData as any)[missingField];
-            
-            const response = await request(app)
-              .post('/api/v1/auth/register')
-              .send(incompleteData);
-            
+
+            const response = await request(app).post('/api/v1/auth/register').send(incompleteData);
+
             // Property: Missing required field should return 400
             expect(response.status).toBe(400);
-            
+
             // Property: Response should indicate validation error
             expect(response.body.success).toBe(false);
             expect(response.body.message).toContain('Validation error');
@@ -367,21 +349,21 @@ describe('Property-Based Tests: Authentication', () => {
           fc.string({ minLength: 8, maxLength: 100 }),
           fc.string({ minLength: 1, maxLength: 50 }),
           fc.string({ minLength: 1, maxLength: 50 }),
-          fc.string({ minLength: 1, maxLength: 20 }).filter(s => !['student', 'creator', 'admin'].includes(s)),
+          fc
+            .string({ minLength: 1, maxLength: 20 })
+            .filter(s => !['student', 'creator', 'admin'].includes(s)),
           async (email, password, firstName, lastName, invalidRole) => {
-            const response = await request(app)
-              .post('/api/v1/auth/register')
-              .send({
-                email,
-                password,
-                first_name: firstName,
-                last_name: lastName,
-                role: invalidRole,
-              });
-            
+            const response = await request(app).post('/api/v1/auth/register').send({
+              email,
+              password,
+              first_name: firstName,
+              last_name: lastName,
+              role: invalidRole,
+            });
+
             // Property: Invalid role should return 400
             expect(response.status).toBe(400);
-            
+
             // Property: Response should indicate validation error
             expect(response.body.success).toBe(false);
             expect(response.body.message).toContain('Validation error');
@@ -402,17 +384,15 @@ describe('Property-Based Tests: Authentication', () => {
           async (email, password, firstName, lastName, role) => {
             // Use unique email to avoid conflicts
             const uniqueEmail = `${Date.now()}-${email}`;
-            
-            const response = await request(app)
-              .post('/api/v1/auth/register')
-              .send({
-                email: uniqueEmail,
-                password,
-                first_name: firstName,
-                last_name: lastName,
-                role,
-              });
-            
+
+            const response = await request(app).post('/api/v1/auth/register').send({
+              email: uniqueEmail,
+              password,
+              first_name: firstName,
+              last_name: lastName,
+              role,
+            });
+
             // Property: Response should never contain password_hash
             if (response.body.data?.user) {
               expect(response.body.data.user.password_hash).toBeUndefined();

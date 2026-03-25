@@ -1,6 +1,6 @@
-import { pool } from '../config/database';
+import { prisma } from '../config/prisma';
 import { redisClient } from '../config/redis';
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Enrollment verification service
@@ -13,7 +13,7 @@ class EnrollmentService {
   /**
    * Check if a user is enrolled in a course
    * Results are cached in Redis for 30 minutes
-   * 
+   *
    * @param userId - The user ID to check
    * @param courseId - The course ID to check
    * @returns Promise<boolean> - true if enrolled, false otherwise
@@ -24,7 +24,7 @@ class EnrollmentService {
     try {
       // Try to get from cache first
       const cachedResult = await redisClient.get(cacheKey);
-      
+
       if (cachedResult !== null) {
         const isEnrolled = cachedResult === '1';
         logger.debug(
@@ -39,23 +39,21 @@ class EnrollmentService {
 
     // Query database
     try {
-      const result = await pool.query(
-        `SELECT EXISTS(
-          SELECT 1 FROM enrollments 
-          WHERE student_id = $1 AND course_id = $2
-        ) as is_enrolled`,
-        [userId, courseId]
-      );
+      const result = await prisma.enrollment.findFirst({
+        where: {
+          student_id: userId,
+          course_id: courseId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
-      const isEnrolled = result.rows[0]?.is_enrolled || false;
+      const isEnrolled = result !== null;
 
       // Cache the result
       try {
-        await redisClient.setex(
-          cacheKey,
-          this.CACHE_TTL,
-          isEnrolled ? '1' : '0'
-        );
+        await redisClient.set(cacheKey, isEnrolled ? '1' : '0', { EX: this.CACHE_TTL });
         logger.debug(
           `Enrollment status for user ${userId} in course ${courseId} cached: ${isEnrolled}`
         );
@@ -73,7 +71,7 @@ class EnrollmentService {
   /**
    * Invalidate enrollment cache for a user-course pair
    * Should be called when enrollment status changes
-   * 
+   *
    * @param userId - The user ID
    * @param courseId - The course ID
    */
@@ -82,9 +80,7 @@ class EnrollmentService {
 
     try {
       await redisClient.del(cacheKey);
-      logger.debug(
-        `Enrollment cache invalidated for user ${userId} in course ${courseId}`
-      );
+      logger.debug(`Enrollment cache invalidated for user ${userId} in course ${courseId}`);
     } catch (error) {
       logger.warn('Failed to invalidate enrollment cache:', error);
     }
@@ -93,15 +89,12 @@ class EnrollmentService {
   /**
    * Check if a user is enrolled in multiple courses
    * More efficient than calling isEnrolled multiple times
-   * 
+   *
    * @param userId - The user ID to check
    * @param courseIds - Array of course IDs to check
    * @returns Promise<Map<string, boolean>> - Map of courseId to enrollment status
    */
-  async areEnrolled(
-    userId: string,
-    courseIds: string[]
-  ): Promise<Map<string, boolean>> {
+  async areEnrolled(userId: string, courseIds: string[]): Promise<Map<string, boolean>> {
     const enrollmentMap = new Map<string, boolean>();
 
     if (courseIds.length === 0) {
@@ -110,15 +103,19 @@ class EnrollmentService {
 
     try {
       // Query all enrollments at once
-      const result = await pool.query(
-        `SELECT course_id FROM enrollments 
-         WHERE student_id = $1 AND course_id = ANY($2)`,
-        [userId, courseIds]
-      );
+      const enrollments = await prisma.enrollment.findMany({
+        where: {
+          student_id: userId,
+          course_id: {
+            in: courseIds,
+          },
+        },
+        select: {
+          course_id: true,
+        },
+      });
 
-      const enrolledCourseIds = new Set(
-        result.rows.map((row) => row.course_id)
-      );
+      const enrolledCourseIds = new Set(enrollments.map(e => e.course_id));
 
       // Build map with all course IDs
       for (const courseId of courseIds) {
@@ -134,18 +131,22 @@ class EnrollmentService {
 
   /**
    * Get all courses a user is enrolled in
-   * 
+   *
    * @param userId - The user ID
    * @returns Promise<string[]> - Array of course IDs
    */
   async getEnrolledCourses(userId: string): Promise<string[]> {
     try {
-      const result = await pool.query(
-        'SELECT course_id FROM enrollments WHERE student_id = $1',
-        [userId]
-      );
+      const enrollments = await prisma.enrollment.findMany({
+        where: {
+          student_id: userId,
+        },
+        select: {
+          course_id: true,
+        },
+      });
 
-      return result.rows.map((row) => row.course_id);
+      return enrollments.map(e => e.course_id);
     } catch (error) {
       logger.error('Error getting enrolled courses:', error);
       throw new Error('Failed to get enrolled courses');

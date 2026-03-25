@@ -3,18 +3,20 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
-import { database } from './config/database';
+import { prisma, PrismaClientSingleton } from './config/prisma';
 import { redisClient } from './config/redis';
 import { awsHealthCheck } from './config/aws';
+import { swaggerSpec } from './config/swagger';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Initialize Redis connection
 const initializeRedis = async (): Promise<void> => {
@@ -56,8 +58,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Health check endpoint with database, Redis, and AWS connectivity
 app.get('/health', async (req, res) => {
   try {
-    const [dbHealthy, redisHealthy, awsHealth] = await Promise.all([
-      database.healthCheck(),
+    // Check database connectivity using Prisma
+    let dbHealthy = false;
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      dbHealthy = true;
+    } catch (error) {
+      logger.error('Database health check failed', error);
+    }
+
+    const [redisHealthy, awsHealth] = await Promise.all([
       redisClient.isReady() ? redisClient.healthCheck() : Promise.resolve(false),
       awsHealthCheck(),
     ]);
@@ -96,15 +106,24 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Learnify API Documentation',
+}));
+
 // API routes
 import authRoutes from './routes/authRoutes';
+import courseRoutes from './routes/courseRoutes';
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1', courseRoutes);
 
 app.use('/api/v1', (req, res) => {
   res.status(200).json({
     message: 'Learnify Backend API v1',
     version: '1.0.0',
+    documentation: '/api-docs',
   });
 });
 
@@ -117,7 +136,7 @@ const gracefulShutdown = async (): Promise<void> => {
   logger.info('Shutting down gracefully...');
 
   try {
-    await Promise.all([database.close(), redisClient.disconnect()]);
+    await Promise.all([PrismaClientSingleton.disconnect(), redisClient.disconnect()]);
     logger.info('All connections closed successfully');
     process.exit(0);
   } catch (error) {
@@ -132,6 +151,10 @@ process.on('SIGINT', gracefulShutdown);
 // Start server
 const startServer = async (): Promise<void> => {
   try {
+    // Connect Prisma Client
+    await prisma.$connect();
+    logger.info('Prisma Client connected');
+
     // Initialize Redis
     await initializeRedis();
 

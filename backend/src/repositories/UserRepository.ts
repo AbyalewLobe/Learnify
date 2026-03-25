@@ -1,5 +1,5 @@
-import { Pool } from 'pg';
-import { database } from '../config/database';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { prisma } from '../config/prisma';
 import { logger } from '../utils/logger';
 
 export interface User {
@@ -31,11 +31,15 @@ export interface UpdateUserDTO {
   bio?: string;
 }
 
-export class UserRepository {
-  private pool: Pool;
+// Type for transaction client
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
-  constructor() {
-    this.pool = database.getPool();
+export class UserRepository {
+  private prisma: PrismaClient | TransactionClient;
+
+  constructor(prismaClient?: PrismaClient | TransactionClient) {
+    // Accept optional Prisma client for transaction support
+    this.prisma = prismaClient || prisma;
   }
 
   /**
@@ -45,23 +49,17 @@ export class UserRepository {
    */
   async create(userData: CreateUserDTO): Promise<User> {
     try {
-      const query = `
-        INSERT INTO users (email, password_hash, first_name, last_name, role)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING *
-      `;
-
-      const values = [
-        userData.email,
-        userData.password_hash,
-        userData.first_name,
-        userData.last_name,
-        userData.role,
-      ];
-
-      const result = await this.pool.query(query, values);
-      logger.info('User created', { userId: result.rows[0].id, email: userData.email });
-      return result.rows[0];
+      const user = await this.prisma.user.create({
+        data: {
+          email: userData.email,
+          password_hash: userData.password_hash,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role: userData.role,
+        },
+      });
+      logger.info('User created', { userId: user.id, email: userData.email });
+      return user as User;
     } catch (error) {
       logger.error('Error creating user:', error);
       throw error;
@@ -75,14 +73,10 @@ export class UserRepository {
    */
   async findById(id: string): Promise<User | null> {
     try {
-      const query = 'SELECT * FROM users WHERE id = $1';
-      const result = await this.pool.query(query, [id]);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      return result.rows[0];
+      const user = await this.prisma.user.findUnique({
+        where: { id },
+      });
+      return user as User | null;
     } catch (error) {
       logger.error('Error finding user by ID:', error);
       throw error;
@@ -96,14 +90,10 @@ export class UserRepository {
    */
   async findByEmail(email: string): Promise<User | null> {
     try {
-      const query = 'SELECT * FROM users WHERE email = $1';
-      const result = await this.pool.query(query, [email]);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      return result.rows[0];
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+      return user as User | null;
     } catch (error) {
       logger.error('Error finding user by email:', error);
       throw error;
@@ -116,45 +106,20 @@ export class UserRepository {
    * @param updates - Fields to update
    * @returns Updated user
    */
+  /**
+   * Update user
+   * @param id - User ID
+   * @param updates - Fields to update
+   * @returns Updated user
+   */
   async update(id: string, updates: UpdateUserDTO): Promise<User> {
     try {
-      const fields: string[] = [];
-      const values: any[] = [];
-      let paramCount = 1;
-
-      if (updates.first_name !== undefined) {
-        fields.push(`first_name = $${paramCount++}`);
-        values.push(updates.first_name);
-      }
-
-      if (updates.last_name !== undefined) {
-        fields.push(`last_name = $${paramCount++}`);
-        values.push(updates.last_name);
-      }
-
-      if (updates.profile_image_url !== undefined) {
-        fields.push(`profile_image_url = $${paramCount++}`);
-        values.push(updates.profile_image_url);
-      }
-
-      if (updates.bio !== undefined) {
-        fields.push(`bio = $${paramCount++}`);
-        values.push(updates.bio);
-      }
-
-      fields.push(`updated_at = CURRENT_TIMESTAMP`);
-      values.push(id);
-
-      const query = `
-        UPDATE users
-        SET ${fields.join(', ')}
-        WHERE id = $${paramCount}
-        RETURNING *
-      `;
-
-      const result = await this.pool.query(query, values);
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: updates,
+      });
       logger.info('User updated', { userId: id });
-      return result.rows[0];
+      return user as User;
     } catch (error) {
       logger.error('Error updating user:', error);
       throw error;
@@ -168,13 +133,10 @@ export class UserRepository {
    */
   async updatePassword(id: string, passwordHash: string): Promise<void> {
     try {
-      const query = `
-        UPDATE users
-        SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2
-      `;
-
-      await this.pool.query(query, [passwordHash, id]);
+      await this.prisma.user.update({
+        where: { id },
+        data: { password_hash: passwordHash },
+      });
       logger.info('User password updated', { userId: id });
     } catch (error) {
       logger.error('Error updating user password:', error);
@@ -188,13 +150,10 @@ export class UserRepository {
    */
   async deactivate(id: string): Promise<void> {
     try {
-      const query = `
-        UPDATE users
-        SET is_active = false, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-      `;
-
-      await this.pool.query(query, [id]);
+      await this.prisma.user.update({
+        where: { id },
+        data: { is_active: false },
+      });
       logger.info('User deactivated', { userId: id });
     } catch (error) {
       logger.error('Error deactivating user:', error);
@@ -208,13 +167,10 @@ export class UserRepository {
    */
   async activate(id: string): Promise<void> {
     try {
-      const query = `
-        UPDATE users
-        SET is_active = true, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-      `;
-
-      await this.pool.query(query, [id]);
+      await this.prisma.user.update({
+        where: { id },
+        data: { is_active: true },
+      });
       logger.info('User activated', { userId: id });
     } catch (error) {
       logger.error('Error activating user:', error);
@@ -229,9 +185,10 @@ export class UserRepository {
    */
   async emailExists(email: string): Promise<boolean> {
     try {
-      const query = 'SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)';
-      const result = await this.pool.query(query, [email]);
-      return result.rows[0].exists;
+      const count = await this.prisma.user.count({
+        where: { email },
+      });
+      return count > 0;
     } catch (error) {
       logger.error('Error checking email existence:', error);
       throw error;

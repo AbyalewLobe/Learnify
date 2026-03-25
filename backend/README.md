@@ -17,7 +17,7 @@ A comprehensive RESTful API system that powers an online learning platform suppo
 
 - **Runtime**: Node.js with TypeScript
 - **Framework**: Express.js
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL with Prisma ORM
 - **Cache**: Redis
 - **Storage**: AWS S3 + CloudFront CDN
 - **Video Processing**: AWS MediaConvert
@@ -53,6 +53,24 @@ A comprehensive RESTful API system that powers an online learning platform suppo
    - JWT secrets
    - Stripe API keys
    - AWS credentials and service configurations
+
+5. Set up the database:
+   ```bash
+   # Run database migrations
+   npm run prisma:migrate:deploy
+   
+   # Generate Prisma Client (automatically runs after npm install)
+   npm run prisma:generate
+   
+   # Optional: Seed the database with initial data
+   npm run prisma:seed
+   ```
+
+6. Verify the setup:
+   ```bash
+   # Open Prisma Studio to inspect your database
+   npm run prisma:studio
+   ```
 
 ### Required Environment Variables
 
@@ -105,6 +123,77 @@ npm test
 npm run test:watch
 ```
 
+Run property-based tests:
+```bash
+npm run test:properties
+```
+
+Run integration tests:
+```bash
+npm run test:integration
+```
+
+## Database Management
+
+### Prisma Commands
+
+The project uses Prisma ORM for database management. Here are the most common commands:
+
+#### Development Workflow
+
+```bash
+# Create a new migration after schema changes
+npm run prisma:migrate:dev
+
+# Generate Prisma Client after schema changes
+npm run prisma:generate
+
+# Open Prisma Studio (visual database browser)
+npm run prisma:studio
+
+# Reset database (WARNING: deletes all data)
+npm run prisma:migrate:reset
+```
+
+#### Production Deployment
+
+```bash
+# Apply pending migrations
+npm run prisma:migrate:deploy
+```
+
+#### Database Seeding
+
+```bash
+# Seed the database with initial data
+npm run prisma:seed
+```
+
+### Schema Changes
+
+When you need to modify the database schema:
+
+1. Edit `prisma/schema.prisma`
+2. Run `npm run prisma:migrate:dev --name descriptive_name`
+3. Prisma will:
+   - Create a new migration file
+   - Apply the migration to your database
+   - Regenerate Prisma Client
+
+### Prisma Studio
+
+Prisma Studio is a visual database browser that allows you to view and edit data:
+
+```bash
+npm run prisma:studio
+```
+
+This will open a web interface at `http://localhost:5555` where you can:
+- Browse all tables
+- View and edit records
+- Run queries
+- Inspect relationships
+
 ## Project Structure
 
 ```
@@ -143,7 +232,8 @@ More endpoints will be documented as they are implemented.
 - Rate limiting (100 requests per minute per IP)
 - CORS protection
 - Input validation and sanitization
-- SQL injection prevention through parameterized queries
+- SQL injection prevention through Prisma's parameterized queries
+- Type-safe database operations with Prisma Client
 
 ## License
 

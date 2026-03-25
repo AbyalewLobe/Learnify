@@ -1,0 +1,502 @@
+// Prisma Schema for Learnify Backend
+// This schema defines the complete database structure for the learning platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+enum Role {
+  student
+  creator
+  admin
+}
+
+enum CourseStatus {
+  draft
+  pending
+  published
+  rejected
+}
+
+enum DifficultyLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum LessonType {
+  video
+  quiz
+  reading
+  assignment
+}
+
+enum VideoStatus {
+  pending
+  processing
+  ready
+  failed
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum WithdrawalStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+// ============================================================================
+// Models
+// ============================================================================
+
+model User {
+  id                String   @id @default(uuid()) @db.Uuid
+  email             String   @unique @db.VarChar(255)
+  password_hash     String   @db.VarChar(255)
+  first_name        String   @db.VarChar(100)
+  last_name         String   @db.VarChar(100)
+  role              Role
+  is_active         Boolean  @default(true)
+  profile_image_url String?  @db.Text
+  bio               String?  @db.Text
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations
+  courses_created         Course[]               @relation("CourseCreator")
+  videos_uploaded         Video[]                @relation("VideoUploader")
+  enrollments             Enrollment[]           @relation("StudentEnrollments")
+  lesson_progress         LessonProgress[]
+  quiz_attempts           QuizAttempt[]
+  assignment_submissions  AssignmentSubmission[]
+  certificates            Certificate[]
+  transactions_as_student Transaction[]          @relation("StudentTransactions")
+  transactions_as_creator Transaction[]          @relation("CreatorTransactions")
+  withdrawals             Withdrawal[]
+  reviews                 Review[]
+  comments                Comment[]
+  notes                   Note[]
+  notifications           Notification[]
+  wishlists               Wishlist[]
+  refresh_tokens          RefreshToken[]
+  graded_assignments      AssignmentSubmission[] @relation("GradedBy")
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Course {
+  id                String           @id @default(uuid()) @db.Uuid
+  creator_id        String           @db.Uuid
+  title             String           @db.VarChar(255)
+  description       String           @db.Text
+  thumbnail_url     String?          @db.Text
+  trailer_video_id  String?          @db.Uuid
+  category          String           @db.VarChar(100)
+  difficulty_level  DifficultyLevel?
+  price             Decimal          @db.Decimal(10, 2)
+  discount_price    Decimal?         @db.Decimal(10, 2)
+  status            CourseStatus     @default(draft)
+  rejection_reason  String?          @db.Text
+  average_rating    Decimal          @default(0) @db.Decimal(3, 2)
+  total_ratings     Int              @default(0)
+  total_enrollments Int              @default(0)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+  published_at      DateTime?
+
+  // Relations
+  creator      User          @relation("CourseCreator", fields: [creator_id], references: [id], onDelete: Cascade)
+  chapters     Chapter[]
+  course_tags  CourseTag[]
+  enrollments  Enrollment[]
+  certificates Certificate[]
+  transactions Transaction[]
+  reviews      Review[]
+  wishlists    Wishlist[]
+  coupons      Coupon[]
+
+  @@index([creator_id])
+  @@index([status])
+  @@index([category])
+  @@index([published_at])
+  @@map("courses")
+}
+
+model CourseTag {
+  id         String   @id @default(uuid()) @db.Uuid
+  course_id  String   @db.Uuid
+  tag        String   @db.VarChar(50)
+  created_at DateTime @default(now())
+
+  // Relations
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([course_id, tag])
+  @@index([course_id])
+  @@index([tag])
+  @@map("course_tags")
+}
+
+model Chapter {
+  id          String   @id @default(uuid()) @db.Uuid
+  course_id   String   @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  order_index Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  course  Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([course_id])
+  @@index([course_id, order_index])
+  @@map("chapters")
+}
+
+model Lesson {
+  id               String     @id @default(uuid()) @db.Uuid
+  chapter_id       String     @db.Uuid
+  title            String     @db.VarChar(255)
+  description      String?    @db.Text
+  lesson_type      LessonType
+  content          Json?      @db.JsonB
+  duration_minutes Int?
+  order_index      Int
+  is_preview       Boolean    @default(false)
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+
+  // Relations
+  chapter                Chapter                @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
+  resources              Resource[]
+  lesson_progress        LessonProgress[]
+  quiz_attempts          QuizAttempt[]
+  assignment_submissions AssignmentSubmission[]
+  comments               Comment[]
+  notes                  Note[]
+
+  @@index([chapter_id])
+  @@index([chapter_id, order_index])
+  @@index([lesson_type])
+  @@map("lessons")
+}
+
+model Video {
+  id                String      @id @default(uuid()) @db.Uuid
+  uploader_id       String      @db.Uuid
+  original_filename String      @db.VarChar(255)
+  s3_key            String      @db.Text
+  duration_seconds  Int?
+  status            VideoStatus @default(pending)
+  error_message     String?     @db.Text
+  resolutions       Json?       @db.JsonB
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+
+  // Relations
+  uploader User @relation("VideoUploader", fields: [uploader_id], references: [id])
+
+  @@index([uploader_id])
+  @@index([status])
+  @@map("videos")
+}
+
+model Resource {
+  id              String   @id @default(uuid()) @db.Uuid
+  lesson_id       String   @db.Uuid
+  title           String   @db.VarChar(255)
+  file_type       String   @db.VarChar(50)
+  file_size_bytes BigInt
+  file_url        String   @db.Text
+  created_at      DateTime @default(now())
+
+  // Relations
+  lesson Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@index([lesson_id])
+  @@map("resources")
+}
+
+model Enrollment {
+  id               String    @id @default(uuid()) @db.Uuid
+  student_id       String    @db.Uuid
+  course_id        String    @db.Uuid
+  enrolled_at      DateTime  @default(now())
+  last_accessed_at DateTime?
+
+  // Relations
+  student User   @relation("StudentEnrollments", fields: [student_id], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, course_id])
+  @@index([student_id])
+  @@index([course_id])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id                     String    @id @default(uuid()) @db.Uuid
+  student_id             String    @db.Uuid
+  lesson_id              String    @db.Uuid
+  is_completed           Boolean   @default(false)
+  completed_at           DateTime?
+  last_accessed_at       DateTime  @default(now())
+  video_position_seconds Int       @default(0)
+
+  // Relations
+  student User   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, lesson_id])
+  @@index([student_id])
+  @@index([lesson_id])
+  @@map("lesson_progress")
+}
+
+model QuizAttempt {
+  id           String   @id @default(uuid()) @db.Uuid
+  student_id   String   @db.Uuid
+  lesson_id    String   @db.Uuid
+  answers      Json     @db.JsonB
+  score        Decimal  @db.Decimal(5, 2)
+  attempted_at DateTime @default(now())
+
+  // Relations
+  student User   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@index([student_id])
+  @@index([lesson_id])
+  @@map("quiz_attempts")
+}
+
+model AssignmentSubmission {
+  id             String    @id @default(uuid()) @db.Uuid
+  student_id     String    @db.Uuid
+  lesson_id      String    @db.Uuid
+  submission_url String    @db.Text
+  submitted_at   DateTime  @default(now())
+  grade          Decimal?  @db.Decimal(5, 2)
+  feedback       String?   @db.Text
+  graded_at      DateTime?
+  graded_by      String?   @db.Uuid
+
+  // Relations
+  student User   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  grader  User?  @relation("GradedBy", fields: [graded_by], references: [id])
+
+  @@index([student_id])
+  @@index([lesson_id])
+  @@map("assignment_submissions")
+}
+
+model Certificate {
+  id                 String   @id @default(uuid()) @db.Uuid
+  student_id         String   @db.Uuid
+  course_id          String   @db.Uuid
+  certificate_number String   @unique @db.VarChar(50)
+  issued_at          DateTime @default(now())
+  pdf_url            String   @db.Text
+
+  // Relations
+  student User   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, course_id])
+  @@index([student_id])
+  @@index([course_id])
+  @@index([certificate_number])
+  @@map("certificates")
+}
+
+model Transaction {
+  id                String            @id @default(uuid()) @db.Uuid
+  student_id        String            @db.Uuid
+  course_id         String            @db.Uuid
+  creator_id        String            @db.Uuid
+  amount            Decimal           @db.Decimal(10, 2)
+  platform_fee      Decimal           @db.Decimal(10, 2)
+  creator_earnings  Decimal           @db.Decimal(10, 2)
+  stripe_payment_id String?           @db.VarChar(255)
+  status            TransactionStatus
+  created_at        DateTime          @default(now())
+
+  // Relations
+  student User   @relation("StudentTransactions", fields: [student_id], references: [id])
+  course  Course @relation(fields: [course_id], references: [id])
+  creator User   @relation("CreatorTransactions", fields: [creator_id], references: [id])
+
+  @@index([student_id])
+  @@index([creator_id])
+  @@index([course_id])
+  @@index([status])
+  @@map("transactions")
+}
+
+model Withdrawal {
+  id                 String           @id @default(uuid()) @db.Uuid
+  creator_id         String           @db.Uuid
+  amount             Decimal          @db.Decimal(10, 2)
+  status             WithdrawalStatus
+  stripe_transfer_id String?          @db.VarChar(255)
+  requested_at       DateTime         @default(now())
+  processed_at       DateTime?
+
+  // Relations
+  creator User @relation(fields: [creator_id], references: [id])
+
+  @@index([creator_id])
+  @@index([status])
+  @@map("withdrawals")
+}
+
+model Review {
+  id          String   @id @default(uuid()) @db.Uuid
+  student_id  String   @db.Uuid
+  course_id   String   @db.Uuid
+  rating      Int
+  review_text String?  @db.Text
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  student User   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, course_id])
+  @@index([student_id])
+  @@index([course_id])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model Wishlist {
+  id         String   @id @default(uuid()) @db.Uuid
+  student_id String   @db.Uuid
+  course_id  String   @db.Uuid
+  added_at   DateTime @default(now())
+
+  // Relations
+  student User   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, course_id])
+  @@index([student_id])
+  @@index([course_id])
+  @@map("wishlists")
+}
+
+model Coupon {
+  id                  String    @id @default(uuid()) @db.Uuid
+  course_id           String    @db.Uuid
+  code                String    @unique @db.VarChar(50)
+  discount_percentage Int
+  max_uses            Int?
+  current_uses        Int       @default(0)
+  expires_at          DateTime?
+  is_active           Boolean   @default(true)
+  created_at          DateTime  @default(now())
+
+  // Relations
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([course_id])
+  @@index([is_active, expires_at])
+  @@map("coupons")
+}
+
+model Comment {
+  id                String   @id @default(uuid()) @db.Uuid
+  lesson_id         String   @db.Uuid
+  user_id           String   @db.Uuid
+  parent_comment_id String?  @db.Uuid
+  content           String   @db.Text
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations
+  lesson         Lesson    @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  parent_comment Comment?  @relation("CommentReplies", fields: [parent_comment_id], references: [id], onDelete: Cascade)
+  replies        Comment[] @relation("CommentReplies")
+
+  @@index([lesson_id])
+  @@index([user_id])
+  @@index([parent_comment_id])
+  @@map("comments")
+}
+
+model Note {
+  id                      String   @id @default(uuid()) @db.Uuid
+  student_id              String   @db.Uuid
+  lesson_id               String   @db.Uuid
+  content                 String   @db.Text
+  video_timestamp_seconds Int?
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  // Relations
+  student User   @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+
+  @@index([student_id])
+  @@index([lesson_id])
+  @@map("notes")
+}
+
+model Notification {
+  id                  String   @id @default(uuid()) @db.Uuid
+  user_id             String   @db.Uuid
+  type                String   @db.VarChar(50)
+  title               String   @db.VarChar(255)
+  message             String   @db.Text
+  related_entity_type String?  @db.VarChar(50)
+  related_entity_id   String?  @db.Uuid
+  is_read             Boolean  @default(false)
+  created_at          DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([user_id, is_read])
+  @@map("notifications")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  user_id    String    @db.Uuid
+  token_hash String    @db.VarChar(255)
+  expires_at DateTime
+  created_at DateTime  @default(now())
+  revoked_at DateTime?
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([token_hash])
+  @@map("refresh_tokens")
+}
