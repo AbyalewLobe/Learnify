@@ -7,12 +7,16 @@ AWS.config.update({
   region: config.aws.region,
   accessKeyId: config.aws.accessKeyId,
   secretAccessKey: config.aws.secretAccessKey,
+  ...(config.aws.endpoint && { endpoint: config.aws.endpoint }),
+  ...(config.aws.endpoint && { s3ForcePathStyle: true }), // Required for LocalStack
 });
 
 // S3 Configuration
 export const s3 = new AWS.S3({
   apiVersion: '2006-03-01',
   signatureVersion: 'v4',
+  ...(config.aws.endpoint && { endpoint: config.aws.endpoint }),
+  ...(config.aws.endpoint && { s3ForcePathStyle: true }),
 });
 
 // CloudFront Configuration

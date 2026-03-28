@@ -49,3 +49,6 @@ test-results/
 
 # PM2
 .pm2/
+
+# Mock S3 storage (local development)
+mock-s3-storage/

@@ -37,6 +37,25 @@ services:
     networks:
       - learnify-network
 
+  # LocalStack for local AWS services (S3, SES, etc.)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: learnify-localstack
+    restart: unless-stopped
+    ports:
+      - "4566:4566"  # LocalStack gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=s3,ses
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - PERSISTENCE=1
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - learnify-network
+
   # Backend API
   backend:
     build:
@@ -143,6 +162,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  localstack_data:
     driver: local
 
 networks:
