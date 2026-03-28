@@ -571,7 +571,9 @@ describe('Property-Based Tests: CourseRepository', () => {
 
             // Verify existing tags are still present (unless they overlap with nonExistentTags)
             const overlappingTags = existingTags.filter(tag => nonExistentTags.includes(tag));
-            const expectedRemainingTags = existingTags.filter(tag => !nonExistentTags.includes(tag));
+            const expectedRemainingTags = existingTags.filter(
+              tag => !nonExistentTags.includes(tag)
+            );
             const uniqueExpectedRemaining = [...new Set(expectedRemainingTags)];
 
             expect(tagsAfterRemoval.length).toBe(uniqueExpectedRemaining.length);
@@ -706,7 +708,7 @@ describe('Property-Based Tests: CourseRepository', () => {
             // Remove third group
             await courseRepository.removeTags(course.id, group3);
             currentTags = await courseRepository.getTags(course.id);
-            
+
             // Only group1 should remain
             expect(currentTags.length).toBe(group1.length);
             for (const tag of group1) {
@@ -846,13 +848,22 @@ describe('Property-Based Tests: CourseRepository', () => {
           fc.array(
             fc.record({
               chapterTitle: fc.string({ minLength: 1, maxLength: 255 }),
-              chapterDescription: fc.option(fc.string({ minLength: 1, maxLength: 500 }), { nil: null }),
+              chapterDescription: fc.option(fc.string({ minLength: 1, maxLength: 500 }), {
+                nil: null,
+              }),
               chapterOrderIndex: fc.integer({ min: 0, max: 100 }),
               lessons: fc.array(
                 fc.record({
                   title: fc.string({ minLength: 1, maxLength: 255 }),
-                  description: fc.option(fc.string({ minLength: 1, maxLength: 500 }), { nil: null }),
-                  lesson_type: fc.constantFrom('video' as const, 'quiz' as const, 'reading' as const, 'assignment' as const),
+                  description: fc.option(fc.string({ minLength: 1, maxLength: 500 }), {
+                    nil: null,
+                  }),
+                  lesson_type: fc.constantFrom(
+                    'video' as const,
+                    'quiz' as const,
+                    'reading' as const,
+                    'assignment' as const
+                  ),
                   order_index: fc.integer({ min: 0, max: 100 }),
                 }),
                 { minLength: 1, maxLength: 5 }
@@ -1079,13 +1090,22 @@ describe('Property-Based Tests: CourseRepository', () => {
           fc.array(
             fc.record({
               chapterTitle: fc.string({ minLength: 1, maxLength: 255 }),
-              chapterDescription: fc.option(fc.string({ minLength: 1, maxLength: 500 }), { nil: null }),
+              chapterDescription: fc.option(fc.string({ minLength: 1, maxLength: 500 }), {
+                nil: null,
+              }),
               chapterOrderIndex: fc.integer({ min: 0, max: 100 }),
               lessons: fc.array(
                 fc.record({
                   title: fc.string({ minLength: 1, maxLength: 255 }),
-                  description: fc.option(fc.string({ minLength: 1, maxLength: 500 }), { nil: null }),
-                  lesson_type: fc.constantFrom('video' as const, 'quiz' as const, 'reading' as const, 'assignment' as const),
+                  description: fc.option(fc.string({ minLength: 1, maxLength: 500 }), {
+                    nil: null,
+                  }),
+                  lesson_type: fc.constantFrom(
+                    'video' as const,
+                    'quiz' as const,
+                    'reading' as const,
+                    'assignment' as const
+                  ),
                   order_index: fc.integer({ min: 0, max: 100 }),
                   duration_minutes: fc.option(fc.integer({ min: 1, max: 300 }), { nil: null }),
                   is_preview: fc.boolean(),
@@ -1300,7 +1320,7 @@ describe('Property-Based Tests: CourseRepository', () => {
             for (let i = 0; i < numChapters; i++) {
               // Use random order_index for chapters
               const chapterOrderIndex = Math.floor(Math.random() * 1000);
-              
+
               const chapter = await prisma.chapter.create({
                 data: {
                   course_id: course.id,
@@ -1313,7 +1333,7 @@ describe('Property-Based Tests: CourseRepository', () => {
               const createdLessons = [];
               for (let j = 0; j < lessonsPerChapter; j++) {
                 const lessonOrderIndex = Math.floor(Math.random() * 1000);
-                
+
                 const lesson = await prisma.lesson.create({
                   data: {
                     chapter_id: chapter.id,
@@ -1681,15 +1701,20 @@ describe('Property-Based Tests: CourseRepository', () => {
             price: fc.integer({ min: 0, max: 99999 }).map(n => n / 100),
           }),
           fc.array(
-            fc.constantFrom('draft' as const, 'pending' as const, 'published' as const, 'rejected' as const),
+            fc.constantFrom(
+              'draft' as const,
+              'pending' as const,
+              'published' as const,
+              'rejected' as const
+            ),
             { minLength: 2, maxLength: 5 }
           ),
           async (uuid, userData, courseData, statusSequence) => {
             const email = `${uuid}@test.com`;
-            
+
             // Clean up any existing data with this email first (in case of shrinking)
             await prisma.user.deleteMany({ where: { email } });
-            
+
             // Create a user (creator) with unique email
             const user = await userRepository.create({
               ...userData,
@@ -1712,7 +1737,7 @@ describe('Property-Based Tests: CourseRepository', () => {
               // Apply each status transition in sequence
               for (const status of statusSequence) {
                 const beforeUpdate = new Date();
-                
+
                 const updatedCourse = await courseRepository.updateStatus(
                   course.id,
                   status,
@@ -1728,18 +1753,22 @@ describe('Property-Based Tests: CourseRepository', () => {
                   // When transitioning to published, published_at should be set to current timestamp
                   expect(updatedCourse?.published_at).toBeDefined();
                   expect(updatedCourse?.published_at).toBeInstanceOf(Date);
-                  
+
                   // Verify it's a recent timestamp
                   const publishedAt = updatedCourse?.published_at!;
-                  expect(publishedAt.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime() - 1000);
+                  expect(publishedAt.getTime()).toBeGreaterThanOrEqual(
+                    beforeUpdate.getTime() - 1000
+                  );
                   expect(publishedAt.getTime()).toBeLessThanOrEqual(afterUpdate.getTime() + 1000);
-                  
+
                   // If this is a re-publish, the timestamp should be different (newer) than before
                   if (hasBeenPublished && previousPublishedAt) {
                     // The new timestamp should be at least as recent as the previous one
-                    expect(publishedAt.getTime()).toBeGreaterThanOrEqual(previousPublishedAt.getTime());
+                    expect(publishedAt.getTime()).toBeGreaterThanOrEqual(
+                      previousPublishedAt.getTime()
+                    );
                   }
-                  
+
                   hasBeenPublished = true;
                   previousPublishedAt = publishedAt;
                 } else {
@@ -1747,13 +1776,15 @@ describe('Property-Based Tests: CourseRepository', () => {
                   if (hasBeenPublished) {
                     // If previously published, published_at should be preserved (not changed)
                     expect(updatedCourse?.published_at).toBeDefined();
-                    expect(updatedCourse?.published_at?.getTime()).toBe(previousPublishedAt?.getTime());
+                    expect(updatedCourse?.published_at?.getTime()).toBe(
+                      previousPublishedAt?.getTime()
+                    );
                   } else {
                     // If never published, published_at should remain undefined
                     expect(updatedCourse?.published_at).toBeUndefined();
                   }
                 }
-                
+
                 // Small delay between transitions
                 await new Promise(resolve => setTimeout(resolve, 10));
               }
@@ -1872,11 +1903,7 @@ describe('Property-Based Tests: CourseRepository', () => {
             }
 
             // Fetch courses with pagination
-            const paginatedCourses = await courseRepository.findByCreator(
-              user.id,
-              limit,
-              offset
-            );
+            const paginatedCourses = await courseRepository.findByCreator(user.id, limit, offset);
 
             // Verify result count is at most limit
             expect(paginatedCourses.length).toBeLessThanOrEqual(limit);
@@ -1938,7 +1965,7 @@ describe('Property-Based Tests: CourseRepository', () => {
 
               // Publish the course
               await courseRepository.updateStatus(course.id, 'published');
-              
+
               // Small delay to ensure different published_at timestamps
               await new Promise(resolve => setTimeout(resolve, 2));
             }
@@ -1957,7 +1984,7 @@ describe('Property-Based Tests: CourseRepository', () => {
             for (let i = 1; i < paginatedCourses.length; i++) {
               const current = paginatedCourses[i].published_at;
               const previous = paginatedCourses[i - 1].published_at;
-              
+
               expect(current).toBeDefined();
               expect(previous).toBeDefined();
               expect(current!.getTime()).toBeLessThanOrEqual(previous!.getTime());
@@ -2014,11 +2041,7 @@ describe('Property-Based Tests: CourseRepository', () => {
 
             // Test various offset values
             for (let offset = 0; offset < numCourses; offset += 3) {
-              const paginatedCourses = await courseRepository.findByCreator(
-                user.id,
-                5,
-                offset
-              );
+              const paginatedCourses = await courseRepository.findByCreator(user.id, 5, offset);
 
               // Verify the first item in paginated result matches the item at offset in full list
               if (offset < allCourses.length && paginatedCourses.length > 0) {
@@ -2069,7 +2092,7 @@ describe('Property-Based Tests: CourseRepository', () => {
 
               // Publish the course
               await courseRepository.updateStatus(course.id, 'published');
-              
+
               // Small delay to ensure different published_at timestamps
               await new Promise(resolve => setTimeout(resolve, 2));
             }
@@ -2142,7 +2165,7 @@ describe('Property-Based Tests: CourseRepository', () => {
             while (hasMore) {
               const page = await courseRepository.findByCreator(user.id, pageSize, offset);
               allPaginatedCourses.push(...page);
-              
+
               if (page.length < pageSize) {
                 hasMore = false;
               } else {
@@ -2211,7 +2234,7 @@ describe('Property-Based Tests: CourseRepository', () => {
               // Publish the course
               await courseRepository.updateStatus(course.id, 'published');
               createdCourseIds.add(course.id);
-              
+
               // Small delay to ensure different published_at timestamps
               await new Promise(resolve => setTimeout(resolve, 2));
             }
@@ -2224,7 +2247,7 @@ describe('Property-Based Tests: CourseRepository', () => {
             while (hasMore) {
               const page = await courseRepository.findPublished(pageSize, offset);
               allPaginatedCourses.push(...page);
-              
+
               if (page.length < pageSize) {
                 hasMore = false;
               } else {
@@ -2245,7 +2268,7 @@ describe('Property-Based Tests: CourseRepository', () => {
             for (let i = 1; i < allPaginatedCourses.length; i++) {
               const current = allPaginatedCourses[i].published_at;
               const previous = allPaginatedCourses[i - 1].published_at;
-              
+
               expect(current).toBeDefined();
               expect(previous).toBeDefined();
               expect(current!.getTime()).toBeLessThanOrEqual(previous!.getTime());

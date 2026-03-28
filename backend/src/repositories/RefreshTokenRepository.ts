@@ -12,7 +12,10 @@ export interface RefreshToken {
 }
 
 // Type for transaction client
-type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+type TransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 
 export class RefreshTokenRepository {
   private prisma: PrismaClient | TransactionClient;

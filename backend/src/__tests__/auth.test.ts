@@ -183,7 +183,7 @@ describe('Authentication System', () => {
 
     it('should refresh tokens successfully', async () => {
       // Wait 1 second to ensure new token has different iat timestamp
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const response = await request(app)
         .post('/api/v1/auth/refresh')

@@ -58,7 +58,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Create refresh token with future expiration
               const expiresAt = new Date();
               expiresAt.setDate(expiresAt.getDate() + daysUntilExpiration);
-              
+
               await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
 
               // Verify token can be found before revocation
@@ -109,7 +109,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Create refresh token with future expiration
               const expiresAt = new Date();
               expiresAt.setDate(expiresAt.getDate() + daysUntilExpiration);
-              
+
               await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
 
               // Verify token is valid before revocation
@@ -158,7 +158,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Create refresh token with any expiration date (past or future)
               const expiresAt = new Date();
               expiresAt.setDate(expiresAt.getDate() + daysUntilExpiration);
-              
+
               await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
 
               // Revoke the token
@@ -173,7 +173,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify the token exists in database but has revoked_at set
               const revokedToken = await prisma.refreshToken.findFirst({
-                where: { token_hash: tokenHash }
+                where: { token_hash: tokenHash },
               });
               expect(revokedToken).not.toBeNull();
               expect(revokedToken?.revoked_at).not.toBeNull();
@@ -210,17 +210,17 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Create refresh token with future expiration
               const expiresAt = new Date();
               expiresAt.setDate(expiresAt.getDate() + daysUntilExpiration);
-              
+
               await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
 
               // Revoke the token multiple times
               for (let i = 0; i < revocationAttempts; i++) {
                 await refreshTokenRepository.revoke(tokenHash);
-                
+
                 // After each revocation, verify token remains invalid
                 const tokenAfterRevoke = await refreshTokenRepository.findByHash(tokenHash);
                 expect(tokenAfterRevoke).toBeNull();
-                
+
                 const isValidAfterRevoke = await refreshTokenRepository.isValid(tokenHash);
                 expect(isValidAfterRevoke).toBe(false);
               }
@@ -228,7 +228,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Final verification - token should still be revoked
               const finalCheck = await refreshTokenRepository.findByHash(tokenHash);
               expect(finalCheck).toBeNull();
-              
+
               const finalValidCheck = await refreshTokenRepository.isValid(tokenHash);
               expect(finalValidCheck).toBe(false);
             } finally {
@@ -274,7 +274,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
-                
+
                 await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
                 tokenHashes.push(tokenHash);
               }
@@ -291,9 +291,9 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify all tokens have revoked_at set
               const allTokens = await prisma.refreshToken.findMany({
-                where: { user_id: user.id }
+                where: { user_id: user.id },
               });
-              
+
               expect(allTokens).toHaveLength(tokenCount);
               for (const token of allTokens) {
                 expect(token.revoked_at).not.toBeNull();
@@ -331,7 +331,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
-                
+
                 await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
                 tokenHashes.push(tokenHash);
               }
@@ -382,7 +382,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
-                
+
                 await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
                 tokenHashes.push(tokenHash);
               }
@@ -445,7 +445,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `token_user1_${user1.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 30);
-                
+
                 await refreshTokenRepository.create(user1.id, tokenHash, expiresAt);
                 tokenHashes1.push(tokenHash);
               }
@@ -456,7 +456,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `token_user2_${user2.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 30);
-                
+
                 await refreshTokenRepository.create(user2.id, tokenHash, expiresAt);
                 tokenHashes2.push(tokenHash);
               }
@@ -468,7 +468,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               for (const tokenHash of tokenHashes1) {
                 const isValid = await refreshTokenRepository.isValid(tokenHash);
                 expect(isValid).toBe(false);
-                
+
                 const token = await refreshTokenRepository.findByHash(tokenHash);
                 expect(token).toBeNull();
               }
@@ -477,7 +477,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               for (const tokenHash of tokenHashes2) {
                 const isValid = await refreshTokenRepository.isValid(tokenHash);
                 expect(isValid).toBe(true);
-                
+
                 const token = await refreshTokenRepository.findByHash(tokenHash);
                 expect(token).not.toBeNull();
                 expect(token?.revoked_at).toBeNull();
@@ -487,9 +487,9 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               await prisma.user.deleteMany({
                 where: {
                   email: {
-                    in: [userData1.email, userData2.email]
-                  }
-                }
+                    in: [userData1.email, userData2.email],
+                  },
+                },
               });
             }
           }
@@ -521,7 +521,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + 30);
-                
+
                 await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
                 tokenHashes.push(tokenHash);
               }
@@ -533,9 +533,9 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify all tokens are revoked (same result regardless of number of calls)
               const allTokens = await prisma.refreshToken.findMany({
-                where: { user_id: user.id }
+                where: { user_id: user.id },
               });
-              
+
               expect(allTokens).toHaveLength(tokenCount);
               for (const token of allTokens) {
                 expect(token.revoked_at).not.toBeNull();
@@ -591,7 +591,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `expired_token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() - (i + 1)); // 1 to expiredCount days ago
-                
+
                 await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
                 expiredTokenHashes.push(tokenHash);
               }
@@ -602,14 +602,14 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `valid_token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() + (i + 1)); // 1 to validCount days from now
-                
+
                 await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
                 validTokenHashes.push(tokenHash);
               }
 
               // Verify all tokens exist before cleanup
               const tokensBeforeCleanup = await prisma.refreshToken.findMany({
-                where: { user_id: user.id }
+                where: { user_id: user.id },
               });
               expect(tokensBeforeCleanup).toHaveLength(expiredCount + validCount);
 
@@ -622,7 +622,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Verify expired tokens are deleted
               for (const tokenHash of expiredTokenHashes) {
                 const token = await prisma.refreshToken.findFirst({
-                  where: { token_hash: tokenHash }
+                  where: { token_hash: tokenHash },
                 });
                 expect(token).toBeNull();
               }
@@ -630,7 +630,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Verify valid tokens still exist
               for (const tokenHash of validTokenHashes) {
                 const token = await prisma.refreshToken.findFirst({
-                  where: { token_hash: tokenHash }
+                  where: { token_hash: tokenHash },
                 });
                 expect(token).not.toBeNull();
                 expect(token?.expires_at.getTime()).toBeGreaterThan(Date.now());
@@ -638,7 +638,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify total count after cleanup
               const tokensAfterCleanup = await prisma.refreshToken.findMany({
-                where: { user_id: user.id }
+                where: { user_id: user.id },
               });
               expect(tokensAfterCleanup).toHaveLength(validCount);
             } finally {
@@ -670,7 +670,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Create tokens with various expiration times
               const pastTokenHashes: string[] = [];
               const futureTokenHashes: string[] = [];
-              
+
               for (let i = 0; i < tokenCount; i++) {
                 // Past token (expired)
                 const pastTokenHash = `past_token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
@@ -693,7 +693,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Verify past tokens are deleted
               for (const tokenHash of pastTokenHashes) {
                 const token = await prisma.refreshToken.findFirst({
-                  where: { token_hash: tokenHash }
+                  where: { token_hash: tokenHash },
                 });
                 expect(token).toBeNull();
               }
@@ -701,7 +701,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               // Verify future tokens still exist
               for (const tokenHash of futureTokenHashes) {
                 const token = await prisma.refreshToken.findFirst({
-                  where: { token_hash: tokenHash }
+                  where: { token_hash: tokenHash },
                 });
                 expect(token).not.toBeNull();
               }
@@ -737,7 +737,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
                 const tokenHash = `expired_token_${user.id}_${i}_${Date.now()}_${Math.random()}`;
                 const expiresAt = new Date();
                 expiresAt.setDate(expiresAt.getDate() - 1); // 1 day ago
-                
+
                 await refreshTokenRepository.create(user.id, tokenHash, expiresAt);
                 expiredTokenHashes.push(tokenHash);
 
@@ -749,7 +749,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify some tokens are revoked and some are not
               const tokensBeforeCleanup = await prisma.refreshToken.findMany({
-                where: { user_id: user.id }
+                where: { user_id: user.id },
               });
               const revokedCount = tokensBeforeCleanup.filter(t => t.revoked_at !== null).length;
               const notRevokedCount = tokensBeforeCleanup.filter(t => t.revoked_at === null).length;
@@ -761,17 +761,17 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify all expired tokens are deleted (both revoked and not revoked)
               expect(deletedCount).toBe(expiredCount);
-              
+
               for (const tokenHash of expiredTokenHashes) {
                 const token = await prisma.refreshToken.findFirst({
-                  where: { token_hash: tokenHash }
+                  where: { token_hash: tokenHash },
                 });
                 expect(token).toBeNull();
               }
 
               // Verify no tokens remain for this user
               const tokensAfterCleanup = await prisma.refreshToken.findMany({
-                where: { user_id: user.id }
+                where: { user_id: user.id },
               });
               expect(tokensAfterCleanup).toHaveLength(0);
             } finally {
@@ -824,7 +824,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               let firstDeleteCount = 0;
               for (let i = 0; i < cleanupCalls; i++) {
                 const deletedCount = await refreshTokenRepository.deleteExpired();
-                
+
                 if (i === 0) {
                   // First call should delete expired tokens
                   firstDeleteCount = deletedCount;
@@ -837,7 +837,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify only valid tokens remain
               const tokensAfterCleanup = await prisma.refreshToken.findMany({
-                where: { user_id: user.id }
+                where: { user_id: user.id },
               });
               expect(tokensAfterCleanup).toHaveLength(validCount);
 
@@ -906,7 +906,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify total tokens before cleanup
               const tokensBeforeCleanup = await prisma.refreshToken.findMany({
-                where: { user_id: { in: userIds } }
+                where: { user_id: { in: userIds } },
               });
               expect(tokensBeforeCleanup).toHaveLength(totalExpired + totalValid);
 
@@ -918,7 +918,7 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
 
               // Verify only valid tokens remain
               const tokensAfterCleanup = await prisma.refreshToken.findMany({
-                where: { user_id: { in: userIds } }
+                where: { user_id: { in: userIds } },
               });
               expect(tokensAfterCleanup).toHaveLength(totalValid);
 
@@ -931,9 +931,9 @@ describe('Property-Based Tests: RefreshTokenRepository', () => {
               await prisma.user.deleteMany({
                 where: {
                   email: {
-                    in: usersData.map(u => u.email)
-                  }
-                }
+                    in: usersData.map(u => u.email),
+                  },
+                },
               });
             }
           }

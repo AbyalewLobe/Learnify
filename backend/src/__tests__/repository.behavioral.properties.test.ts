@@ -1,6 +1,6 @@
 /**
  * Property-Based Tests for Repository Behavioral Equivalence
- * 
+ *
  * These tests verify that the Prisma implementation produces the same
  * behavior as the original pg library implementation.
  */
@@ -33,9 +33,9 @@ describe('Repository Behavioral Equivalence Properties', () => {
 
   /**
    * Feature: prisma-migration, Property 16: Repository Behavioral Equivalence
-   * 
+   *
    * **Validates: Requirements 3.11, 4.15, 5.9**
-   * 
+   *
    * For all repository methods and any valid input, the Prisma implementation
    * SHALL produce the same output (return value and side effects) as the pg
    * library implementation.
@@ -101,20 +101,16 @@ describe('Repository Behavioral Equivalence Properties', () => {
 
     it('should return null for non-existent records', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.uuid(),
-          fc.emailAddress(),
-          async (nonExistentId, nonExistentEmail) => {
-            const foundById = await userRepository.findById(nonExistentId);
-            expect(foundById).toBeNull();
+        fc.asyncProperty(fc.uuid(), fc.emailAddress(), async (nonExistentId, nonExistentEmail) => {
+          const foundById = await userRepository.findById(nonExistentId);
+          expect(foundById).toBeNull();
 
-            const foundByEmail = await userRepository.findByEmail(nonExistentEmail);
-            expect(foundByEmail).toBeNull();
+          const foundByEmail = await userRepository.findByEmail(nonExistentEmail);
+          expect(foundByEmail).toBeNull();
 
-            const exists = await userRepository.emailExists(nonExistentEmail);
-            expect(exists).toBe(false);
-          }
-        ),
+          const exists = await userRepository.emailExists(nonExistentEmail);
+          expect(exists).toBe(false);
+        }),
         { numRuns: 100 }
       );
     });
@@ -122,7 +118,7 @@ describe('Repository Behavioral Equivalence Properties', () => {
 
   /**
    * Feature: prisma-migration, Property 16: Repository Behavioral Equivalence
-   * 
+   *
    * **Validates: Requirements 3.11, 4.15, 5.9**
    */
   describe('CourseRepository behavioral equivalence', () => {
@@ -241,7 +237,7 @@ describe('Repository Behavioral Equivalence Properties', () => {
 
   /**
    * Feature: prisma-migration, Property 16: Repository Behavioral Equivalence
-   * 
+   *
    * **Validates: Requirements 3.11, 4.15, 5.9**
    */
   describe('RefreshTokenRepository behavioral equivalence', () => {
@@ -343,7 +339,11 @@ describe('Repository Behavioral Equivalence Properties', () => {
             const user = await userRepository.create(userData);
 
             // Create expired token
-            await refreshTokenRepository.create(user.id, tokenHash, new Date(Date.now() - 86400000));
+            await refreshTokenRepository.create(
+              user.id,
+              tokenHash,
+              new Date(Date.now() - 86400000)
+            );
 
             // Delete expired
             await refreshTokenRepository.deleteExpired();

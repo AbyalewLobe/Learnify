@@ -151,7 +151,6 @@ export const listCourses = async (req: Request, res: Response, next: NextFunctio
     const limit = parseInt(req.query.limit as string) || 20;
 
     const result = await courseService.listPublishedCourses(page, limit);
-    
 
     res.json({
       courses: result.courses,

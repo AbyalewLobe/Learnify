@@ -5,7 +5,7 @@ import { UserRepository, CreateUserDTO } from '../repositories/UserRepository';
 /**
  * Unit Tests for RefreshTokenRepository
  * Tests specific examples and edge cases for RefreshTokenRepository methods
- * 
+ *
  * **Validates: Requirements 5.9, 12.1, 12.2, 12.3, 12.4, 12.5**
  */
 
@@ -187,9 +187,7 @@ describe('Unit Tests: RefreshTokenRepository', () => {
     });
 
     it('should not throw error when revoking non-existent token', async () => {
-      await expect(
-        refreshTokenRepository.revoke('non_existent_token')
-      ).resolves.not.toThrow();
+      await expect(refreshTokenRepository.revoke('non_existent_token')).resolves.not.toThrow();
     });
   });
 
@@ -290,9 +288,7 @@ describe('Unit Tests: RefreshTokenRepository', () => {
         role: 'student',
       });
 
-      await expect(
-        refreshTokenRepository.revokeAllForUser(anotherUser.id)
-      ).resolves.not.toThrow();
+      await expect(refreshTokenRepository.revokeAllForUser(anotherUser.id)).resolves.not.toThrow();
     });
   });
 
@@ -433,7 +429,7 @@ describe('Unit Tests: RefreshTokenRepository', () => {
       const tokenHash = 'transaction_token';
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async tx => {
         const txRefreshTokenRepository = new RefreshTokenRepository(tx);
         const token = await txRefreshTokenRepository.create(testUserId, tokenHash, expiresAt);
 
@@ -451,7 +447,7 @@ describe('Unit Tests: RefreshTokenRepository', () => {
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async tx => {
           const txRefreshTokenRepository = new RefreshTokenRepository(tx);
           await txRefreshTokenRepository.create(testUserId, tokenHash, expiresAt);
 

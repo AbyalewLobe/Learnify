@@ -44,7 +44,7 @@ beforeAll(async () => {
   try {
     // Connect to Prisma
     await prisma.$connect();
-    
+
     // Clean all tables (in correct order to respect foreign keys)
     await prisma.refreshToken.deleteMany();
     await prisma.courseTag.deleteMany();
@@ -52,7 +52,7 @@ beforeAll(async () => {
     await prisma.chapter.deleteMany();
     await prisma.course.deleteMany();
     await prisma.user.deleteMany();
-    
+
     console.info('Test database initialized successfully');
   } catch (error) {
     console.error('Failed to initialize test database:', error);

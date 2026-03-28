@@ -6,10 +6,10 @@ import { redisClient } from '../config/redis';
 
 /**
  * Feature: prisma-migration, Property 17: API Response Format Preservation
- * 
+ *
  * For all existing API endpoints and any valid request, the response format,
  * status codes, and error handling behavior SHALL remain identical after migration.
- * 
+ *
  * **Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6**
  */
 describe('API Response Format Preservation Properties', () => {
@@ -283,7 +283,7 @@ describe('API Response Format Preservation Properties', () => {
     const refreshToken = loginResponse.body.data.tokens.refreshToken;
 
     // Wait 1 second to ensure new token has different timestamp
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Test refresh
     const response = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });

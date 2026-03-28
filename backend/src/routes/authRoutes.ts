@@ -329,6 +329,6 @@ router.post('/password/confirm', validate(passwordResetConfirmSchema), confirmPa
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/logout', authenticate , logout);
+router.post('/logout', authenticate, logout);
 
 export default router;

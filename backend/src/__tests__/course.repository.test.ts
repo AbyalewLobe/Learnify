@@ -1,11 +1,15 @@
 import { PrismaClient } from '@prisma/client';
-import { CourseRepository, CreateCourseData, UpdateCourseData } from '../repositories/CourseRepository';
+import {
+  CourseRepository,
+  CreateCourseData,
+  UpdateCourseData,
+} from '../repositories/CourseRepository';
 import { UserRepository, CreateUserDTO } from '../repositories/UserRepository';
 
 /**
  * Unit Tests for CourseRepository
  * Tests specific examples and edge cases for CourseRepository methods
- * 
+ *
  * **Validates: Requirements 4.15, 12.1, 12.2, 12.3, 12.4, 12.5**
  */
 
@@ -619,9 +623,7 @@ describe('Unit Tests: CourseRepository', () => {
     it('should throw error when updating status of non-existent course', async () => {
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
 
-      await expect(
-        courseRepository.updateStatus(nonExistentId, 'published')
-      ).rejects.toThrow();
+      await expect(courseRepository.updateStatus(nonExistentId, 'published')).rejects.toThrow();
     });
   });
 
@@ -841,7 +843,7 @@ describe('Unit Tests: CourseRepository', () => {
         price: 49.99,
       };
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async tx => {
         const txCourseRepository = new CourseRepository(tx);
         const course = await txCourseRepository.create(courseData);
 
@@ -864,7 +866,7 @@ describe('Unit Tests: CourseRepository', () => {
       };
 
       try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async tx => {
           const txCourseRepository = new CourseRepository(tx);
           await txCourseRepository.create(courseData);
 

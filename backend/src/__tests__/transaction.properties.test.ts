@@ -1,6 +1,6 @@
 /**
  * Property-Based Tests for Transaction Support
- * 
+ *
  * These tests verify that Prisma transactions work correctly with
  * atomicity and client isolation guarantees.
  */
@@ -23,9 +23,9 @@ describe('Transaction Properties', () => {
 
   /**
    * Feature: prisma-migration, Property 22: Transaction Atomicity
-   * 
+   *
    * **Validates: Requirements 15.4, 15.5**
-   * 
+   *
    * For all multi-step operations executed in a transaction, either all
    * operations SHALL succeed and persist, or all operations SHALL fail
    * and rollback with no changes persisted.
@@ -49,7 +49,7 @@ describe('Transaction Properties', () => {
           }),
           async (userData, courseData) => {
             // Execute multiple operations in a transaction
-            const result = await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async tx => {
               const userRepo = new UserRepository(tx);
               const courseRepo = new CourseRepository(tx);
 
@@ -86,10 +86,10 @@ describe('Transaction Properties', () => {
             last_name: fc.string({ minLength: 1, maxLength: 100 }),
             role: fc.constant('creator' as const),
           }),
-          async (userData) => {
+          async userData => {
             // Attempt transaction that will fail
             try {
-              await prisma.$transaction(async (tx) => {
+              await prisma.$transaction(async tx => {
                 const userRepo = new UserRepository(tx);
                 const courseRepo = new CourseRepository(tx);
 
@@ -139,7 +139,7 @@ describe('Transaction Properties', () => {
           fc.array(fc.string({ minLength: 1, maxLength: 50 }), { minLength: 1, maxLength: 3 }),
           async (userData, courseData, tags) => {
             // Execute multiple operations in a transaction
-            const result = await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async tx => {
               const userRepo = new UserRepository(tx);
               const courseRepo = new CourseRepository(tx);
 
@@ -168,9 +168,9 @@ describe('Transaction Properties', () => {
 
   /**
    * Feature: prisma-migration, Property 23: Transaction Client Isolation
-   * 
+   *
    * **Validates: Requirements 15.3**
-   * 
+   *
    * For all repository methods that accept an optional transaction client,
    * when a transaction client is provided, all database operations SHALL
    * use that client instead of the default singleton client.
@@ -186,9 +186,9 @@ describe('Transaction Properties', () => {
             last_name: fc.string({ minLength: 1, maxLength: 100 }),
             role: fc.constantFrom('student' as const, 'creator' as const, 'admin' as const),
           }),
-          async (userData) => {
+          async userData => {
             // Create user inside transaction
-            const userId = await prisma.$transaction(async (tx) => {
+            const userId = await prisma.$transaction(async tx => {
               const userRepo = new UserRepository(tx);
               const user = await userRepo.create(userData);
               return user.id;
@@ -228,7 +228,7 @@ describe('Transaction Properties', () => {
 
             // Start transaction but don't commit yet
             try {
-              await prisma.$transaction(async (tx) => {
+              await prisma.$transaction(async tx => {
                 const txRepo = new UserRepository(tx);
 
                 // Create user inside transaction
@@ -280,7 +280,7 @@ describe('Transaction Properties', () => {
           fc.string({ minLength: 64, maxLength: 64 }),
           async (userData, courseData, tokenHash) => {
             // Execute operations across multiple repositories in one transaction
-            const result = await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async tx => {
               const userRepo = new UserRepository(tx);
               const courseRepo = new CourseRepository(tx);
               const tokenRepo = new RefreshTokenRepository(tx);

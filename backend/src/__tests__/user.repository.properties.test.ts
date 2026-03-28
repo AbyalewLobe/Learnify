@@ -44,7 +44,7 @@ describe('Property-Based Tests: UserRepository', () => {
             last_name: fc.string({ minLength: 1, maxLength: 100 }),
             role: fc.constantFrom('student' as const, 'creator' as const, 'admin' as const),
           }),
-          async (userData) => {
+          async userData => {
             // Create user
             const created = await userRepository.create(userData);
 
@@ -76,7 +76,7 @@ describe('Property-Based Tests: UserRepository', () => {
             last_name: fc.string({ minLength: 1, maxLength: 100 }),
             role: fc.constantFrom('student' as const, 'creator' as const, 'admin' as const),
           }),
-          async (userData) => {
+          async userData => {
             // Create user
             const created = await userRepository.create(userData);
 
@@ -138,12 +138,12 @@ describe('Property-Based Tests: UserRepository', () => {
               expect(secondUpdate.last_name).toBe(firstUpdate.last_name);
               expect(secondUpdate.bio).toBe(firstUpdate.bio);
               expect(secondUpdate.profile_image_url).toBe(firstUpdate.profile_image_url);
-              
+
               // Verify the data matches what was updated (Prisma normalizes undefined to null)
               expect(secondUpdate.first_name).toBe(updateData.first_name);
               expect(secondUpdate.last_name).toBe(updateData.last_name);
               expect(secondUpdate.bio).toBe(updateData.bio ?? null);
-              
+
               // Verify other fields remain unchanged
               expect(secondUpdate.email).toBe(userData.email);
               expect(secondUpdate.role).toBe(userData.role);
@@ -178,7 +178,7 @@ describe('Property-Based Tests: UserRepository', () => {
             last_name: fc.string({ minLength: 1, maxLength: 100 }),
             role: fc.constantFrom('student' as const, 'creator' as const, 'admin' as const),
           }),
-          async (userData) => {
+          async userData => {
             try {
               // Create user (starts as active by default)
               const created = await userRepository.create(userData);
@@ -300,7 +300,7 @@ describe('Property-Based Tests: UserRepository', () => {
             try {
               // Create user
               const created = await userRepository.create(userData);
-              
+
               // Wait a small amount to ensure updated_at will change
               await new Promise(resolve => setTimeout(resolve, 10));
 

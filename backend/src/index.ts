@@ -107,17 +107,25 @@ app.get('/health', async (req, res) => {
 });
 
 // Swagger API Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Learnify API Documentation',
-}));
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Learnify API Documentation',
+  })
+);
 
 // API routes
 import authRoutes from './routes/authRoutes';
 import courseRoutes from './routes/courseRoutes';
+import chapterRoutes from './routes/chapterRoutes';
+import lessonRoutes from './routes/lessonRoutes';
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1', courseRoutes);
+app.use('/api/v1', chapterRoutes);
+app.use('/api/v1', lessonRoutes);
 
 app.use('/api/v1', (req, res) => {
   res.status(200).json({

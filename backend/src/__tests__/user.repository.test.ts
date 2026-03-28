@@ -4,7 +4,7 @@ import { UserRepository, CreateUserDTO, UpdateUserDTO } from '../repositories/Us
 /**
  * Unit Tests for UserRepository
  * Tests specific examples and edge cases for UserRepository methods
- * 
+ *
  * **Validates: Requirements 3.11, 12.1, 12.2, 12.3, 12.4, 12.5**
  */
 
@@ -449,7 +449,7 @@ describe('Unit Tests: UserRepository', () => {
         role: 'student',
       };
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async tx => {
         const txUserRepository = new UserRepository(tx);
         const user = await txUserRepository.create(userData);
 
@@ -472,7 +472,7 @@ describe('Unit Tests: UserRepository', () => {
       };
 
       try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async tx => {
           const txUserRepository = new UserRepository(tx);
           await txUserRepository.create(userData);
 

@@ -25,7 +25,7 @@ describe('PrismaErrorHandler Properties', () => {
    * Feature: prisma-migration, Property 18: Unique Constraint Error Mapping
    * For all repository operations that violate unique constraints, the repository
    * SHALL throw an error that the error handler maps to HTTP 409 Conflict.
-   * 
+   *
    * **Validates: Requirements 13.1, 13.5**
    */
   describe('Property 18: Unique Constraint Error Mapping', () => {
@@ -39,7 +39,7 @@ describe('PrismaErrorHandler Properties', () => {
             last_name: fc.string({ minLength: 1, maxLength: 100 }),
             role: fc.constantFrom(Role.student, Role.creator, Role.admin),
           }),
-          async (userData) => {
+          async userData => {
             // Create first user
             await testPrisma.user.create({
               data: userData,
@@ -151,7 +151,7 @@ describe('PrismaErrorHandler Properties', () => {
    * Feature: prisma-migration, Property 19: Foreign Key Constraint Error Mapping
    * For all repository operations that violate foreign key constraints, the repository
    * SHALL throw an error that the error handler maps to HTTP 400 Bad Request.
-   * 
+   *
    * **Validates: Requirements 13.2, 13.5**
    */
   describe('Property 19: Foreign Key Constraint Error Mapping', () => {
@@ -202,37 +202,33 @@ describe('PrismaErrorHandler Properties', () => {
 
     it('should consistently map P2003 errors to BadRequestError across different relations', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.uuid(),
-          fc.uuid(),
-          async (nonExistentCourseId, nonExistentUserId) => {
-            // Attempt to create enrollment with non-existent course_id
-            let caughtError: any = null;
-            try {
-              await testPrisma.enrollment.create({
-                data: {
-                  student_id: nonExistentUserId,
-                  course_id: nonExistentCourseId,
-                },
-              });
-            } catch (error) {
-              caughtError = error;
-            }
-
-            expect(caughtError).not.toBeNull();
-
-            let handledError: any = null;
-            try {
-              PrismaErrorHandler.handle(caughtError);
-            } catch (error) {
-              handledError = error;
-            }
-
-            // Should be BadRequestError for any foreign key violation
-            expect(handledError).toBeInstanceOf(BadRequestError);
-            expect((handledError as BadRequestError).statusCode).toBe(400);
+        fc.asyncProperty(fc.uuid(), fc.uuid(), async (nonExistentCourseId, nonExistentUserId) => {
+          // Attempt to create enrollment with non-existent course_id
+          let caughtError: any = null;
+          try {
+            await testPrisma.enrollment.create({
+              data: {
+                student_id: nonExistentUserId,
+                course_id: nonExistentCourseId,
+              },
+            });
+          } catch (error) {
+            caughtError = error;
           }
-        ),
+
+          expect(caughtError).not.toBeNull();
+
+          let handledError: any = null;
+          try {
+            PrismaErrorHandler.handle(caughtError);
+          } catch (error) {
+            handledError = error;
+          }
+
+          // Should be BadRequestError for any foreign key violation
+          expect(handledError).toBeInstanceOf(BadRequestError);
+          expect((handledError as BadRequestError).statusCode).toBe(400);
+        }),
         { numRuns: 20 }
       );
     });
@@ -243,7 +239,7 @@ describe('PrismaErrorHandler Properties', () => {
    * For all repository find methods, when a record does not exist, the method
    * SHALL return null (for findById, findByEmail, findByHash) or empty array
    * (for findMany methods).
-   * 
+   *
    * **Validates: Requirements 13.3**
    */
   describe('Property 20: Not Found Handling Consistency', () => {
@@ -312,33 +308,30 @@ describe('PrismaErrorHandler Properties', () => {
 
     it('should consistently handle not found errors across delete operations', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          fc.uuid(),
-          async (nonExistentCourseId) => {
-            // Attempt to delete non-existent course
-            let caughtError: any = null;
-            try {
-              await testPrisma.course.delete({
-                where: { id: nonExistentCourseId },
-              });
-            } catch (error) {
-              caughtError = error;
-            }
-
-            expect(caughtError).not.toBeNull();
-
-            let handledError: any = null;
-            try {
-              PrismaErrorHandler.handle(caughtError);
-            } catch (error) {
-              handledError = error;
-            }
-
-            // Should be NotFoundError
-            expect(handledError).toBeInstanceOf(NotFoundError);
-            expect((handledError as NotFoundError).statusCode).toBe(404);
+        fc.asyncProperty(fc.uuid(), async nonExistentCourseId => {
+          // Attempt to delete non-existent course
+          let caughtError: any = null;
+          try {
+            await testPrisma.course.delete({
+              where: { id: nonExistentCourseId },
+            });
+          } catch (error) {
+            caughtError = error;
           }
-        ),
+
+          expect(caughtError).not.toBeNull();
+
+          let handledError: any = null;
+          try {
+            PrismaErrorHandler.handle(caughtError);
+          } catch (error) {
+            handledError = error;
+          }
+
+          // Should be NotFoundError
+          expect(handledError).toBeInstanceOf(NotFoundError);
+          expect((handledError as NotFoundError).statusCode).toBe(404);
+        }),
         { numRuns: 20 }
       );
     });
