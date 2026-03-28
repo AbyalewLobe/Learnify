@@ -79,6 +79,66 @@ router.get('/courses', listCourses);
 
 /**
  * @swagger
+ * /api/courses/my:
+ *   get:
+ *     summary: List courses created by the authenticated user
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of courses per page
+ *     responses:
+ *       200:
+ *         description: List of user's courses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 courses:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Course'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 20
+ *                     total:
+ *                       type: integer
+ *                       example: 10
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Forbidden - requires creator or admin role
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/courses/my', authenticate, authorize('creator', 'admin'), listMyCourses);
+
+/**
+ * @swagger
  * /api/courses/{id}:
  *   get:
  *     summary: Get course details by ID
@@ -378,65 +438,5 @@ router.post(
   authorizeOwnership('course'),
   submitCourseForReview
 );
-
-/**
- * @swagger
- * /api/courses/my:
- *   get:
- *     summary: List courses created by the authenticated user
- *     tags: [Courses]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *         description: Number of courses per page
- *     responses:
- *       200:
- *         description: List of user's courses
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 courses:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Course'
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     page:
- *                       type: integer
- *                       example: 1
- *                     limit:
- *                       type: integer
- *                       example: 20
- *                     total:
- *                       type: integer
- *                       example: 10
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Forbidden - requires creator or admin role
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/courses/my', authenticate, authorize('creator', 'admin'), listMyCourses);
 
 export default router;

@@ -15,6 +15,7 @@ import {
   passwordResetRequestSchema,
   passwordResetConfirmSchema,
 } from '../utils/validation';
+import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
 
@@ -328,6 +329,6 @@ router.post('/password/confirm', validate(passwordResetConfirmSchema), confirmPa
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/logout', logout);
+router.post('/logout', authenticate , logout);
 
 export default router;
